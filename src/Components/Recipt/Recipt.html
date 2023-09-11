@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Code Example</title>
+    <!-- Include qrcode-generator library -->
+    <script src="/Users/macbook/Documents/Projects/OrderApp/QR/qrcode.min.js"></script>
+</head>
+<body>
+    <div id="qrcode">
+        test
+    </div>
+    <script>
+        // Content you want to encode
+        var contentToEncode = 'https://www.example.com'; // Replace with the actual URL or content
+
+        // Create a QRCode instance
+        var qrcode = new QRCode(document.getElementById("qrcode"), "http://jindo.dev.naver.com/collie");
+        // new QRCode(document.getElementById("qrcode"), {
+        //     text: contentToEncode,
+        //     width: 128,
+        //     height: 128,
+        // });
+
+        // Generate the QR code
+        qrcode.makeCode(contentToEncode);
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Reciept</title>
+    <style type="text/css">
+        @media print{
+            .button{
+                display: none;
+            }
+        }
+        @media print{
+            @page{
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+            body{
+                max-height: fit-content;
+                padding-top: 72px;
+                padding-bottom: 72px;   
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print" style="border:1px solid #a1a1a1; width: 82mm; background: white;padding: 10px; margin: 0 auto; text-align: center;">
+      <div class="top_header" style="display: flex;">
+      	<!-- yahan image ka url dal dioo shahboo -->
+        <img src="images/logo.png" style="width: 38%">
+        <h3 style="font-size: 17px;font-family: sans-serif;margin: 54px 0 0 -20px">pizzablitzöstringen.de</h3>
+      </div>
+      <div class="middle-header">
+        <h3 style="font-size: 15px;font-weight: 800;font-family: math;margin: 7px 0 0 0;">Kuhngasse 1, 76684 Östringen</h3>
+        <h3 style="    font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Östringen, Tell:0725326560-61</h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;"><?php echo "
+            Befehl no: ", $order_id?></h3>
+        <!-- <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;"><?php echo $datetime?></h3> -->
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Phone:</h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Email:</h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Address:</h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Name: </h3>
+        <!-- <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;"><?php echo $data['Shipping_address_2']." ".$data['Shipping_city']?></h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;"><?php echo $data['Shipping_postal_code']?></h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;"><?php echo $data['Shipping_area']?></h3>
+        <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;"><?php echo $data['addtional_notes']?></h3> -->
+        <div>
+          <h1 style="font-size: 16px;font-weight: 700;font-family: sans-serif;    margin: 10px 0 0 0;">
+                Befehl Einzelheiten*</h1>
+          <div class="Details">
+            <table style="width: 100%">
+              <thead>
+                <tr>
+                  <th style="text-align: left; font-family: sans-serif;">Qty</th>
+                  <th style="width: 80%;text-align: left; font-family: sans-serif;">Menge</th>
+                  <th style="text-align: left; font-family: sans-serif;">Preis</th>
+                </tr>
+              </thead>
+              <?php
+                            $totalAmount = 0;
+                            $Addons_Price = 0;
+                foreach ($result as $key => $value) {
+                                $addons =  json_decode($value['addons']);
+                                $dressing = json_decode($value['dressing']);
+                                $types = json_decode($value['types']);
+                                $payment_type = $value['payment_type'];
+                                $totalAmount += ($value['price'] - ($value['price']*$value['discount_percent']/100));
+                                $deliveryCharger = $value['Shipping_Cost'];
+                                // echo var_dump($dressing);
+                                ?>
+                                <table style="width: 100%">
+                                    <tbody style="font-size: 12px;">
+                                        <tr>
+                                            <td style="text-align: left;">X<?php echo $value['qty'] ?></td>
+                                            <td style="text-align: left; width: 80%; font-weight: 500;font-family: sans-serif;"><b><?php echo $value['name'] ?></b>
+                                    
+                                            
+                                            <?php if(sizeof($types) > 0){
+                                            ?>
+                                            
+                                            <?php 
+                                               foreach($types as $type){
+                                                  echo ""," - " ;echo ($type->ts_name)."<br>";
+                                               }}
+                                               $types = 0;
+                                               
+                                               ?>
+                                    
+                                            <?php if(sizeof($addons) >0){
+                                            ?>
+                                          
+                      
+                                            <?php 
+                                               $addonforinner = 0;
+                                               foreach($addons as $addon){
+                                                   //,  " €".$addon->as_price
+                                                  echo "X","" ;echo ($addon->quantity), " ".($addon->as_name)."<br>";
+                                                  $addonforinner +=number_format((float)($addon->as_price*$addon->quantity), 2, '.', '');
+                                                 
+                                                  $Addons_Price +=number_format((float)($addon->as_price*$addon->quantity), 2, '.', '');
+                                               }
+                                                // echo "Addons Total: €". $Addons_Price;
+                                               }?>
+                                               
+                                               
+                                               <?php 
+                                               foreach($dressing as $dressings){
+                                                  echo ($dressings->dressing_name) ; 
+                                               } ?>
+                                            
+                                            </td>
+                                            <td style="text-align: left;"><b>€<?php echo (($value['price'] - ($value['price']*$value['discount_percent']/100))+$addonforinner)*$value['qty'];
+                                             $addonforinner = 0;
+                                            ?><b></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                 <table>
+                                    <tbody style="font-size: 12px;">
+                                        <tr>
+                                            <td style="width: 23%;text-align: left;"></td>
+                                            <td style="width: 33%;text-align: left;padding: 0 8px 0 0;font-family: sans-serif;">
+                                               
+                                            </td>
+                                            <td style="width: 33%;text-align: left;padding: 0 0px 0 0;font-family: sans-serif;"></td>
+                                            <td style="text-align: left;">
+                                              
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                  
+                <?php }?>   
+                
+              <?php  foreach ($result_deal as $key => $value){ ?>
+                       <table style="width: 100%">
+                                    <tbody style="font-size: 12px;">
+                                        <tr>
+                                            
+                                            
+                                            <td style="text-align: left;">X1</td>
+                                          
+                                           
+                                   
+                                          <td style="text-align: left; width: 80%; font-weight: 500;font-family: sans-serif;">
+                                            <?php echo $value['deal_name']."<br>" ?>
+                                          <?php 
+                                             $no = $value['no_of_deal'];
+                                              $sql_sub= "SELECT o.id, o.user_id, u.phone , u.email , u.name as cxname , o.order_total_price, o.addtional_notes,o.payment_type,o.Shipping_Cost,o.Shipping_address,o.Shipping_address_2,o.Shipping_city,o.Shipping_area, o.Shipping_postal_code,od.id AS order_detail_id, od.order_id, od.deal_id, od.deal_item_id, od.product_id, od.qty, od.addons, od.types, od.dressing ,p.name, p.description, p.img  , od.price , od.cost , od.discount_percent , dl.di_num_free_items FROM `orders_zee` o INNER JOIN `order_details_zee` od ON od.order_id = o.id INNER JOIN `products` p ON p.id = od.product_id INNER JOIN users as u ON u.id = o.user_id INNER JOIN deal_items as dl ON dl.di_id = od.deal_item_id WHERE o.id = $order_id AND od.deal_id > 0 AND od.no_of_deal = $no";
+                                                  $result_sub = mysqli_query($conn,$sql_sub);
+                                                  
+                                                  while($row = mysqli_fetch_array($result_sub)){
+                                                  
+                                                    $addons =  json_decode($row['addons']);
+                                                    $dressing = json_decode($row['dressing']);
+                                                    $types = json_decode($row['types']);
+                                                    $di_num_free_items = ($row['di_num_free_items']);
+                                                  
+                                                  ?>
+                                                        
+                                                  
+                                                     
+                                                      <?php echo $row['name']  ?> -
+                                                       
+                                                       <?php if(sizeof($types) > 0){
+                                                        ?>
+                                                        
+                                                        <?php 
+                                                           foreach($types as $type){
+                                                              echo ""," - " ;echo ($type->ts_name)."<br>";
+                                                           }}
+                                                           $types = 0;
+                                                           
+                                                           ?>
+                                                           
+                                                           <?php if(sizeof($addons) >0){
+                                                            ?>
+                                                          
+                                                           <br>
+                                                            <?php 
+                                                               $addonforinner = 0;
+                                                               $Addons_Price = 0;
+                                                               foreach($addons as $addon){
+                                                                 if($di_num_free_items == 0){
+                                                                     //,  " €".$addon->as_price
+                                                                  echo "X","" ;echo ($addon->quantity), " ".($addon->as_name)."<br>";
+                                                                  $addonforinner +=number_format((float)($addon->as_price*$addon->quantity), 2, '.', '');
+                                                                  $Addons_Price +=number_format((float)($addon->as_price*$addon->quantity), 2, '.', '');
+                                                                 }else{
+                                                                  echo "X","" ;echo ($addon->quantity), " ".($addon->as_name),  "<br>";
+                                                                  $di_num_free_items -= $addon->quantity;
+                                                                 }
+                                                                  
+                                                                }
+                                                                // echo "Addons Total: €". $Addons_Price;
+                                                               }?>
+                                                               <br>
+                                                            <?php 
+                                                            foreach($dressing as $dressings){
+                                                                  echo ($dressings->dressing_name) ; 
+                                                             } ?>
+                                                    
+                                                 
+                                            <?php } ?></td>
+                      
+                                             
+                                                    
+                                                    <td style="text-align:left; margin-top:100px">€<?php echo (($value['price'])+$addonforinner);
+                                                     $addonforinner = 0;
+                                                    ?></td>
+                                               
+                                     
+                                          
+                                        
+                                    </tbody>
+                                </table>
+              
+              <?php }?>   
+            </table>
+          </div>
+        </div>
+              <div class="footer">
+                <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+                    <li style="width: 50%;text-align: left;">Zwischensumme:</li>
+                    <li style="width: 50%;text-align: right;"><?php echo "€". number_format((float)($totalAmount+$Addons_Price+$deliveryCharger)*$value['qty'], 2, '.', ''); ?></li>
+                </ul>
+            </div>
+            <div class="footer">
+                <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+                    <li style="width: 50%;text-align: left;">Lieferladegeräte:</li>
+                    <li style="width: 50%;text-align: right;"><?php echo "€". $deliveryCharger; ?></li>
+                </ul>
+            </div>
+             <div class="footer">
+                <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+                    <li style="width: 50%;text-align: left;">Gesamt:</li>
+                    <li style="width: 50%;text-align: right;"><?php echo "€".number_format((float)$total['order_total_price'], 2, '.', ''); ; ?></li>
+                </ul>
+            </div>
+         
+        <div class="footer">
+          <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+            <li style="width: 50%;text-align: left;">Bezahlverfahren:</li>
+            <li style="width: 50%;text-align: right;"><?php echo $payment_type; ?></li>
+          </ul>
+        </div>
+            <div class="footer">
+                <p style="margin: 10px 0 10px 0; padding: 45px; font-weight: 700;font-family: sans-serif;">Danke für Ihren Einkauf*</p>
+            </div>
+      </div>    
+    </div>
+
+<script type="text/javascript">
+    myFunction();
+    window.onafterprint = function(e){
+        closePrintView();
+    };
+    function myFunction(){
+        window.print();
+    };
+    // function closePrintView(){
+    //     window.location.href = 'reciept.php';
+    // }
+</script>
+</body>
+</html>
