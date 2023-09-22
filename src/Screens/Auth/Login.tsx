@@ -6,6 +6,7 @@ import {useForm} from 'react-hook-form';
 import {moderateScale, scale} from 'react-native-size-matters';
 import CustomButton from '../../Components/CustomButton';
 import {useDispatch} from 'react-redux';
+import { Login } from '../../Redux/Reducers/Actions';
 
 const LoginScreen: React.FC = () => {
   const {
@@ -26,8 +27,8 @@ const LoginScreen: React.FC = () => {
         email: data.email,
       },
     };
-
-    dispatch(loginAction);
+dispatch(Login(data));
+    // dispatch(loginAction);
   };
 
   const [index, setIndex] = useState<number>(100);

@@ -10,7 +10,8 @@ import { useFocusEffect } from '@react-navigation/native';
 
 const NewOrdersScreen: React.FC = ({navigation}) => {
   const user = useSelector((state:RootState)=> state.auth?.userDetails);
-  const type = user?.email == "kitchen@example.com" ? "kitchen" : null;
+  const orders = useSelector((state:RootState)=> state.auth?.newOrders)
+  const type = user?.role_id == "1" ? "kitchen" : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -33,7 +34,7 @@ const NewOrdersScreen: React.FC = ({navigation}) => {
     <View style={styles.container}>
       <FlatList
         style={{flex: 1, marginTop:verticalScale(10)}}
-        data={newOrders}
+        data={orders}
         renderItem={({item}) => (
          <ListComponent
          item={item}

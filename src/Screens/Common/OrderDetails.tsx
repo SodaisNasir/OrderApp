@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert,
 } from 'react-native';
 import {Colors} from '../../Constants/Colors';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
@@ -16,11 +17,16 @@ import {useFocusEffect} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
+import {imageUrl} from '../../Constants/Urls';
+import {updateOrderStatus} from '../../Redux/Reducers/Actions';
+import {useDispatch} from 'react-redux';
 
 const OrderDetailsScreen: React.FC = ({navigation, route}) => {
   const [isVisible, setIsVisible] = useState(false);
   const [time, setTime] = useState(10);
   const order = route.params.order;
+  console.log('order.addons ==>', order.order_details[0].qty);
+
   const accountType = route.params.type;
   console.log('accountType', accountType);
 
@@ -36,6 +42,22 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
     {name: 'Product 2', price: 150.0},
     {name: 'Product 3', price: 200.0},
   ];
+
+  // ${JSON.parse(item.addons)
+  //   .map(item => {
+  //    return `<div class="item">
+  // <div class="item-quantity">x${item.quantity}</div>
+  // <div class="item-name">${item.as_name}</div>
+  // <div class="item-price">$${item.as_price}</div>
+  // </div>`;
+  //   })
+  //   .join(' ')}
+
+  const dispatch = useDispatch();
+  const onConfirm = () => {
+    const status = order.status == 'pending' ? 'inprogress' : 'delivered';
+    dispatch(updateOrderStatus(status, order.id, printRecpit));
+  };
 
   const printRecpit = async () => {
     const results = await RNHTMLtoPDF.convert({
@@ -110,17 +132,20 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
           <p>City, State, ZIP</p>
           <p>Contact: (123) 456-7890</p>
         </div>
-        ${itemsData.map(item => {
-          return (`<div class="item">
-      <div class="item-quantity">1x</div>
-      <div class="item-name">${item.name}</div>
+        ${order.order_details
+          .map(item => {
+            return `<div class="item">
+      <div class="item-quantity">x${item.qty}</div>
+      <div class="item-name">${item.product_details.name}</div>
       <div class="item-price">$${item.price}</div>
-      </div>`)
-        }).join(' ')}
     
-        <div class="total">
-          Total: $45.00
-        </div>
+      </div>`;
+          })
+          .join(' ')}
+    
+        ${`<div class="total">
+          Total: ${order.order_total_price}
+        </div>`}
         
         <div class="customer-info">
           <p class="info-label">Customer:</p>
@@ -256,7 +281,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
               Order Details
             </Text>
             <FlatList
-              data={order.details}
+              data={order.order_details}
               renderItem={({item}) => (
                 <View
                   style={{
@@ -276,23 +301,29 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                     shadowOpacity: 1,
                   }}>
                   <View style={{flexDirection: 'row'}}>
-                    <View style={{height: scale(50), width: scale(50)}}>
+                    <View
+                      style={{
+                        height: scale(50),
+                        width: scale(50),
+                        backgroundColor: 'red',
+                      }}>
                       <Image
                         style={{height: '100%', width: '100%'}}
                         source={{
-                          uri: 'https://images.unsplash.com/photo-1571066811602-716837d681de?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=868&q=80',
+                          uri: `${imageUrl}${item.product_details.img}`,
                         }}
                       />
                     </View>
-                    <View style={{marginLeft: scale(5)}}>
+                    <View style={{marginLeft: scale(5), width: '60%'}}>
                       <Text
+                        numberOfLines={2}
                         style={{
                           fontSize: scale(10),
                         }}>
-                        {item.product}
+                        {item.product_details.name}
                       </Text>
 
-                      {item.addOns && (
+                      {item.addons && JSON.parse(item.addons).length > 0 && (
                         <>
                           <Text
                             style={{
@@ -307,7 +338,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                               height: scale(10),
                               width: scale(80),
                             }}>
-                            {item.addOns.map(item => (
+                            {JSON.parse(item.addons).map(item => (
                               <View
                                 style={{
                                   flexDirection: 'row',
@@ -320,7 +351,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
 
                                     fontSize: scale(8),
                                   }}>
-                                  {item.name}
+                                  {item.as_name}
                                 </Text>
                                 <Text
                                   style={{
@@ -331,7 +362,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                                   style={{
                                     color: Colors.iconBackground,
                                     fontSize: scale(8),
-                                  }}>{`$${item.price}`}</Text>
+                                  }}>{`$${item.as_price}`}</Text>
                               </View>
                             ))}
                           </ScrollView>
@@ -344,7 +375,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                       style={{
                         fontSize: scale(9),
                         color: Colors.iconBackground,
-                      }}>{`Qty : ${item.quantity}`}</Text>
+                      }}>{`Qty : ${item.qty}`}</Text>
                     <Text
                       style={{
                         fontSize: scale(9),
@@ -356,7 +387,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
             />
 
             <View style={{alignSelf: 'flex-end', marginBottom: scale(30)}}>
-              <Text>{`Total Amount :$${order.totalAmount}`} </Text>
+              <Text>{`Total Amount :$${order.order_total_price}`} </Text>
 
               <Text style={{alignSelf: 'center'}}>
                 Status :
@@ -385,47 +416,49 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                   size={scale(15)}
                   color="black"
                 />
-                <Text>{order.address}</Text>
+                <Text>{order.Shipping_postal_code}</Text>
               </View>
             </View>
           </View>
-         {accountType != 'kitchen' && order.status != "delivered" &&<View
-            style={{
-              flex: 0.3,
-              backgroundColor: Colors.backgroundColor,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: scale(10),
-            }}>
-            <View style={{marginVertical: scale(20)}}>
-              <Text>Time To Deliver / Prepare (Minutes)</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <TouchableOpacity onPress={() => setTime(time + 10)}>
-                <Text style={{fontSize: scale(30)}}>+</Text>
-              </TouchableOpacity>
-              <View
-                style={{
-                  borderWidth: scale(1),
-                  height: scale(50),
-                  width: scale(50),
-                  marginHorizontal: scale(10),
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Text>{time}</Text>
+          {accountType == 'kitchen' && order.status != 'delivered' && (
+            <View
+              style={{
+                flex: 0.3,
+                backgroundColor: Colors.backgroundColor,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: scale(10),
+              }}>
+              <View style={{marginVertical: scale(20)}}>
+                <Text>Time To Deliver / Prepare (Minutes)</Text>
               </View>
-              <TouchableOpacity onPress={() => setTime(time + 10)}>
-                <Text style={{fontSize: scale(30)}}>-</Text>
-              </TouchableOpacity>
-            </View>
-            {/* <CustomButton
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <TouchableOpacity onPress={() => setTime(time + 10)}>
+                  <Text style={{fontSize: scale(30)}}>+</Text>
+                </TouchableOpacity>
+                <View
+                  style={{
+                    borderWidth: scale(1),
+                    height: scale(50),
+                    width: scale(50),
+                    marginHorizontal: scale(10),
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Text>{time}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setTime(time + 10)}>
+                  <Text style={{fontSize: scale(30)}}>-</Text>
+                </TouchableOpacity>
+              </View>
+              {/* <CustomButton
           title="Confirm"
           onPress={onBackdropPress}
           ButtonStyle={{height: '15%', width: '40%', marginTop: scale(20)}}
         /> */}
-          </View>}
-          {accountType != 'kitchen' && (
+            </View>
+          )}
+          {accountType == 'kitchen' && (
             <View
               style={{
                 flexDirection: 'row',
@@ -442,7 +475,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
               {order.status == 'pending' && (
                 <>
                   <TouchableOpacity
-                    onPress={printRecpit}
+                    onPress={onConfirm}
                     style={[
                       styles.bottomButtons,
                       {
@@ -455,7 +488,6 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                   </TouchableOpacity>
                 </>
               )}
-
             </View>
           )}
         </View>

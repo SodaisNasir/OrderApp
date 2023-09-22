@@ -5,10 +5,14 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { ListComponent } from "../../Components/ListComponent";
 import { completedOrders } from "../../Constants/DummyData";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
 
 
 
 const CompletedOrdersScreen:React.FC =({navigation})=>{
+  const user = useSelector((state: RootState) => state.auth?.userDetails);
+  const completedOrders = useSelector((state: RootState) => state.auth?.completedOrders);
+  const type = user?.role_id == '1' ? 'kitchen' : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -34,7 +38,7 @@ const CompletedOrdersScreen:React.FC =({navigation})=>{
             renderItem={({item}) => (
              <ListComponent
              item={item}
-             onPress={()=> navigation.navigate("Order Details", {order:item})}
+             onPress={()=> navigation.navigate("Order Details", {order:item,type})}
              />
             )}
           />

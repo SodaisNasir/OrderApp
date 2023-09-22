@@ -76,6 +76,16 @@ PODS:
     - hermes-engine/Pre-built (= 0.72.3)
   - hermes-engine/Pre-built (0.72.3)
   - libevent (2.1.12)
+  - OneSignalXCFramework (3.12.4):
+    - OneSignalXCFramework/OneSignalCore (= 3.12.4)
+    - OneSignalXCFramework/OneSignalExtension (= 3.12.4)
+    - OneSignalXCFramework/OneSignalOutcomes (= 3.12.4)
+  - OneSignalXCFramework/OneSignalCore (3.12.4)
+  - OneSignalXCFramework/OneSignalExtension (3.12.4):
+    - OneSignalXCFramework/OneSignalCore
+    - OneSignalXCFramework/OneSignalOutcomes
+  - OneSignalXCFramework/OneSignalOutcomes (3.12.4):
+    - OneSignalXCFramework/OneSignalCore
   - OpenSSL-Universal (1.1.1100)
   - RCT-Folly (2021.07.22.00):
     - boost
@@ -379,6 +389,9 @@ PODS:
     - glog
   - react-native-html-to-pdf (0.12.0):
     - React-Core
+  - react-native-onesignal (4.5.1):
+    - OneSignalXCFramework (= 3.12.4)
+    - React (< 1.0.0, >= 0.13.0)
   - react-native-pager-view (6.2.0):
     - React-Core
   - react-native-print (0.11.0):
@@ -497,6 +510,8 @@ PODS:
     - React-perflogger (= 0.72.3)
   - ReactNativeCameraKit (13.0.0):
     - React-Core
+  - RNCAsyncStorage (1.19.3):
+    - React-Core
   - RNCMaskedView (0.2.9):
     - React-Core
   - RNGestureHandler (2.12.1):
@@ -561,6 +576,7 @@ DEPENDENCIES:
   - React-jsinspector (from `../node_modules/react-native/ReactCommon/jsinspector`)
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - react-native-html-to-pdf (from `../node_modules/react-native-html-to-pdf`)
+  - react-native-onesignal (from `../node_modules/react-native-onesignal`)
   - react-native-pager-view (from `../node_modules/react-native-pager-view`)
   - react-native-print (from `../node_modules/react-native-print`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -582,6 +598,7 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeCameraKit (from `../node_modules/react-native-camera-kit`)
+  - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCMaskedView (from `../node_modules/@react-native-masked-view/masked-view`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNScreens (from `../node_modules/react-native-screens`)
@@ -602,6 +619,7 @@ SPEC REPOS:
     - FlipperKit
     - fmt
     - libevent
+    - OneSignalXCFramework
     - OpenSSL-Universal
     - SocketRocket
     - YogaKit
@@ -654,6 +672,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/logger"
   react-native-html-to-pdf:
     :path: "../node_modules/react-native-html-to-pdf"
+  react-native-onesignal:
+    :path: "../node_modules/react-native-onesignal"
   react-native-pager-view:
     :path: "../node_modules/react-native-pager-view"
   react-native-print:
@@ -696,6 +716,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeCameraKit:
     :path: "../node_modules/react-native-camera-kit"
+  RNCAsyncStorage:
+    :path: "../node_modules/@react-native-async-storage/async-storage"
   RNCMaskedView:
     :path: "../node_modules/@react-native-masked-view/masked-view"
   RNGestureHandler:
@@ -728,6 +750,7 @@ SPEC CHECKSUMS:
   glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
   hermes-engine: 10fbd3f62405c41ea07e71973ea61e1878d07322
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
+  OneSignalXCFramework: 087934ab0d4d7445fcf1c015c7c782359e26c020
   OpenSSL-Universal: ebc357f1e6bc71fa463ccb2fe676756aff50e88c
   RCT-Folly: 424b8c9a7a0b9ab2886ffe9c3b041ef628fd4fb1
   RCTRequired: a2faf4bad4e438ca37b2040cb8f7799baa065c18
@@ -745,6 +768,7 @@ SPEC CHECKSUMS:
   React-jsinspector: b511447170f561157547bc0bef3f169663860be7
   React-logger: c5b527272d5f22eaa09bb3c3a690fee8f237ae95
   react-native-html-to-pdf: 4c5c6e26819fe202971061594058877aa9b25265
+  react-native-onesignal: 7bd44dbd031d8d57110c0203836ffc37ddead526
   react-native-pager-view: 0ccb8bf60e2ebd38b1f3669fa3650ecce81db2df
   react-native-print: f704aef52d931bfce6d1d84351dbb5232d7ecb89
   react-native-safe-area-context: 9697629f7b2cda43cf52169bb7e0767d330648c2
@@ -766,6 +790,7 @@ SPEC CHECKSUMS:
   React-utils: bcb57da67eec2711f8b353f6e3d33bd8e4b2efa3
   ReactCommon: 3ccb8fb14e6b3277e38c73b0ff5e4a1b8db017a9
   ReactNativeCameraKit: 9d46a5d7dd544ca64aa9c03c150d2348faf437eb
+  RNCAsyncStorage: c913ede1fa163a71cea118ed4670bbaaa4b511bb
   RNCMaskedView: 949696f25ec596bfc697fc88e6f95cf0c79669b6
   RNGestureHandler: c0d04458598fcb26052494ae23dda8f8f5162b13
   RNScreens: b21dc57dfa2b710c30ec600786a3fc223b1b92e7

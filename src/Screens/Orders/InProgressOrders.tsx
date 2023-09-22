@@ -5,20 +5,25 @@ import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import {allOrders, newOrders} from '../../Constants/DummyData';
 import {ListComponent} from '../../Components/ListComponent';
 import {useFocusEffect} from '@react-navigation/native';
+import {useSelector} from 'react-redux';
 
 const InProgressOrdersScreen: React.FC = ({navigation}) => {
+  const user = useSelector((state: RootState) => state.auth?.userDetails);
+  const inprogressOrders = useSelector((state: RootState) => state.auth?.pendingOrders);
+  const type = user?.role_id == '1' ? 'kitchen' : null;
+
   useFocusEffect(
     useCallback(() => {
       navigation.getParent()?.setOptions({
         tabBarLabelStyle: {fontSize: scale(8), color: Colors.backgroundColor},
         // tabBarItemStyle: { width: },
-        tabBarStyle: {backgroundColor: Colors.primary,},
+        tabBarStyle: {backgroundColor: Colors.primary},
         tabBarActiveTintColor: 'red',
 
         tabBarIndicatorStyle: {
           backgroundColor: 'red',
         },
-        swipeEnabled:true
+        swipeEnabled: true,
       });
     }),
   );
@@ -26,13 +31,20 @@ const InProgressOrdersScreen: React.FC = ({navigation}) => {
     <View style={styles.container}>
       <FlatList
         style={{flex: 1, marginTop: verticalScale(10)}}
-        data={allOrders}
+        data={inprogressOrders}
         renderItem={({item}) => (
           <ListComponent
             item={item}
-            onPress={() => navigation.navigate('Order Details', {order: item})}
+            onPress={() =>
+              navigation.navigate('Order Details', {order: item, type})
+            }
           />
         )}
+        ListEmptyComponent={
+          <View style={{alignItems: 'center', justifyContent: 'center',}}>
+            <Text>No Orders</Text>
+          </View>
+        }
       />
     </View>
   );

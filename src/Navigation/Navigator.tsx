@@ -12,8 +12,8 @@ console.log("USR ==>",user?.email);
     return (
         <NavigationContainer>
            {!user &&<AuthNavigator/>}
-           {user?.email == "Kitchen@example.com" && <KitchenTabs/>}
-           {user?.email == "rider@example.com" && <RiderTabs/>}
+           {user?.role_id == 1 && <KitchenTabs/>}
+           {user?.role_id == 2 && <RiderTabs/>}
         </NavigationContainer>
     )
 }

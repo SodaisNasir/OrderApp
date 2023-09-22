@@ -23,14 +23,14 @@ export const ListComponent: React.FC<ListComponentProps> = ({item, onPress}) => 
             fontSize: scale(12),
             color: item.status != "pending"  ? Colors.backgroundColor : Colors.textBlue,
           }}>
-          {item.orderNumber}
+          {item.id}
         </Text>
         <Text
           style={{
             fontSize: scale(8),
             color: item.status != "pending" ? Colors.backgroundColor : Colors.textBlackColor,
           }}>
-          {item.address}
+          {item.Shipping_postal_code}
         </Text>
       </View>
       <View>
@@ -38,7 +38,7 @@ export const ListComponent: React.FC<ListComponentProps> = ({item, onPress}) => 
           style={{
             fontSize: scale(12),
             color: item.status != "pending" ? Colors.backgroundColor : Colors.textBlue,
-          }}>{`$${item.totalAmount}`}</Text>
+          }}>{`$${item.order_total_price}`}</Text>
         <Text
           style={{
             fontSize: scale(8),
