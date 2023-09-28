@@ -11,6 +11,8 @@ import { useFocusEffect } from '@react-navigation/native';
 const NewOrdersScreen: React.FC = ({navigation}) => {
   const user = useSelector((state:RootState)=> state.auth?.userDetails);
   const orders = useSelector((state:RootState)=> state.auth?.newOrders)
+  console.log("NEW ORDERS ==>",orders);
+  
   const type = user?.role_id == "1" ? "kitchen" : null;
 
   useFocusEffect(

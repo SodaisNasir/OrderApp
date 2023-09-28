@@ -25,7 +25,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
   const [isVisible, setIsVisible] = useState(false);
   const [time, setTime] = useState(10);
   const order = route.params.order;
-  console.log('order.addons ==>', order.order_details[0].qty);
+  console.log('order.addons ==>', order.order_details[0]);
 
   const accountType = route.params.type;
   console.log('accountType', accountType);
@@ -56,7 +56,8 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
   const dispatch = useDispatch();
   const onConfirm = () => {
     const status = order.status == 'pending' ? 'inprogress' : 'delivered';
-    dispatch(updateOrderStatus(status, order.id, printRecpit));
+    // dispatch(updateOrderStatus(status, order.id, printRecpit));
+    printRecpit();
   };
 
   const printRecpit = async () => {
@@ -132,7 +133,18 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
           <p>City, State, ZIP</p>
           <p>Contact: (123) 456-7890</p>
         </div>
-        ${order.order_details
+        ${ order.order_details.deal ?  order.order_details.deal
+          .map(item => {
+            return `<div class="item">
+      <div class="item-quantity">x${item.qty}</div>
+      <div class="item-name">${item.deal_details.deal_name}</div>
+      <div class="item-price">$${item.deal_details.deal_price}</div>
+    
+      </div>`;
+          })
+          .join(' ') :  ""}
+    
+        ${order.order_details.product  ?  order.order_details.product
           .map(item => {
             return `<div class="item">
       <div class="item-quantity">x${item.qty}</div>
@@ -141,7 +153,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
     
       </div>`;
           })
-          .join(' ')}
+          .join(' ') : " "}
     
         ${`<div class="total">
           Total: ${order.order_total_price}
@@ -167,7 +179,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
     });
 
     // Generate the QR code
-    qrcode.makeCode(contentToEncode);
+    qrcode.makeCode(qrcode);
 </script>
       </body>
       </html>
@@ -281,7 +293,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
               Order Details
             </Text>
             <FlatList
-              data={order.order_details}
+              data={order.order_details.product}
               renderItem={({item}) => (
                 <View
                   style={{
@@ -385,6 +397,221 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                 </View>
               )}
             />
+            {
+              order.order_details.deals && (<>
+            
+          
+              <FlatList
+             data={order.order_details.deals}
+             renderItem={({item}) => (
+              <>
+              {/* <View
+                 style={{
+                   flexDirection: 'row',
+                   alignItems: 'center',
+                   justifyContent: 'space-between',
+                   marginVertical: scale(5),
+                   borderRadius: scale(10),
+                   padding: scale(10),
+                   marginHorizontal: scale(5),
+                   shadowOffset: {
+                     height: scale(1),
+                     width: scale(1),
+                   },
+                   backgroundColor: Colors.backgroundColor,
+                   shadowColor: Colors.iconBackground,
+                   shadowOpacity: 1,
+                 }}>
+                 <View style={{flexDirection: 'row'}}>
+                   <View
+                     style={{
+                       height: scale(50),
+                       width: scale(50),
+                       backgroundColor: 'red',
+                     }}>
+                     <Image
+                       style={{height: '100%', width: '100%'}}
+                       source={{
+                         uri: `${imageUrl}${item.deal_details.deal_image}`,
+                       }}
+                     />
+                   </View>
+                   <View style={{marginLeft: scale(5), width: '60%'}}>
+                     <Text
+                       numberOfLines={2}
+                       style={{
+                         fontSize: scale(10),
+                       }}>
+                       {item.product_details.name}
+                     </Text>
+
+                     {item.addons && JSON.parse(item.addons).length > 0 && (
+                       <>
+                         <Text
+                           style={{
+                             fontSize: scale(9),
+                             fontWeight: 'bold',
+                           }}>
+                           AddOns
+                         </Text>
+                         <ScrollView
+                           style={{
+                             marginLeft: scale(5),
+                             height: scale(10),
+                             width: scale(80),
+                           }}>
+                           {JSON.parse(item.addons).map(item => (
+                             <View
+                               style={{
+                                 flexDirection: 'row',
+                                 alignItems: 'center',
+                                 justifyContent: 'space-between',
+                               }}>
+                               <Text
+                                 style={{
+                                   color: Colors.iconBackground,
+
+                                   fontSize: scale(8),
+                                 }}>
+                                 {item.as_name}
+                               </Text>
+                               <Text
+                                 style={{
+                                   color: Colors.iconBackground,
+                                   fontSize: scale(8),
+                                 }}>{`x${item.quantity}`}</Text>
+                               <Text
+                                 style={{
+                                   color: Colors.iconBackground,
+                                   fontSize: scale(8),
+                                 }}>{`$${item.as_price}`}</Text>
+                             </View>
+                           ))}
+                         </ScrollView>
+                       </>
+                     )}
+                   </View>
+                 </View>
+                 <View>
+                   <Text
+                     style={{
+                       fontSize: scale(9),
+                       color: Colors.iconBackground,
+                     }}>{`Qty : ${item.qty}`}</Text>
+                   <Text
+                     style={{
+                       fontSize: scale(9),
+                       color: Colors.iconBackground,
+                     }}>{`Price :$${item.price}`}</Text>
+                 </View>
+               </View> */}
+               <View
+                 style={{
+                   flexDirection: 'row',
+                   alignItems: 'center',
+                   justifyContent: 'space-between',
+                   marginVertical: scale(5),
+                   borderRadius: scale(10),
+                   padding: scale(10),
+                   marginHorizontal: scale(5),
+                   shadowOffset: {
+                     height: scale(1),
+                     width: scale(1),
+                   },
+                   backgroundColor: Colors.backgroundColor,
+                   shadowColor: Colors.iconBackground,
+                   shadowOpacity: 1,
+                 }}>
+                 <View style={{flexDirection: 'row'}}>
+                   <View
+                     style={{
+                       height: scale(50),
+                       width: scale(50),
+                       backgroundColor: 'red',
+                     }}>
+                     <Image
+                       style={{height: '100%', width: '100%'}}
+                       source={{
+                         uri: `${imageUrl}${item.product_details.img}`,
+                       }}
+                     />
+                   </View>
+                   <View style={{marginLeft: scale(5), width: '60%'}}>
+                     <Text
+                       numberOfLines={2}
+                       style={{
+                         fontSize: scale(10),
+                       }}>
+                       {item.product_details.name}
+                     </Text>
+
+                     {item.addons && JSON.parse(item.addons).length > 0 && (
+                       <>
+                         <Text
+                           style={{
+                             fontSize: scale(9),
+                             fontWeight: 'bold',
+                           }}>
+                           AddOns
+                         </Text>
+                         <ScrollView
+                           style={{
+                             marginLeft: scale(5),
+                             height: scale(10),
+                             width: scale(80),
+                           }}>
+                           {JSON.parse(item.addons).map(item => (
+                             <View
+                               style={{
+                                 flexDirection: 'row',
+                                 alignItems: 'center',
+                                 justifyContent: 'space-between',
+                               }}>
+                               <Text
+                                 style={{
+                                   color: Colors.iconBackground,
+
+                                   fontSize: scale(8),
+                                 }}>
+                                 {item.as_name}
+                               </Text>
+                               <Text
+                                 style={{
+                                   color: Colors.iconBackground,
+                                   fontSize: scale(8),
+                                 }}>{`x${item.quantity}`}</Text>
+                               <Text
+                                 style={{
+                                   color: Colors.iconBackground,
+                                   fontSize: scale(8),
+                                 }}>{`$${item.as_price}`}</Text>
+                             </View>
+                           ))}
+                         </ScrollView>
+                       </>
+                     )}
+                   </View>
+                 </View>
+                 <View>
+                   <Text
+                     style={{
+                       fontSize: scale(9),
+                       color: Colors.iconBackground,
+                     }}>{`Qty : ${item.qty}`}</Text>
+                   <Text
+                     style={{
+                       fontSize: scale(9),
+                       color: Colors.iconBackground,
+                     }}>{`Price :$${item.price}`}</Text>
+                 </View>
+               </View>
+              </>
+             )}
+           />
+              </>
+              )
+            }
+            
 
             <View style={{alignSelf: 'flex-end', marginBottom: scale(30)}}>
               <Text>{`Total Amount :$${order.order_total_price}`} </Text>
