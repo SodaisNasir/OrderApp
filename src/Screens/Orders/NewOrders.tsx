@@ -4,17 +4,20 @@ import {Colors} from '../../Constants/Colors';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import {allOrders, newOrders} from '../../Constants/DummyData';
 import { ListComponent } from '../../Components/ListComponent';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../Redux/Reducers';
 import { useFocusEffect } from '@react-navigation/native';
+import { getOrders } from '../../Redux/Reducers/Actions';
 
 const NewOrdersScreen: React.FC = ({navigation}) => {
+  const dispatch = useDispatch()
   const user = useSelector((state:RootState)=> state.auth?.userDetails);
   const orders = useSelector((state:RootState)=> state.auth?.newOrders)
-  console.log("NEW ORDERS ==>",orders);
+  // console.log("NEW ORDERS ==>",orders);
   
   const type = user?.role_id == "1" ? "kitchen" : null;
-
+  // const filterData = orders?.filter((item) => item.status == 'inprogress')
+// console.log('filterData', filterData)
   useFocusEffect(
     useCallback(() => {
       navigation.getParent()?.setOptions({
@@ -28,7 +31,14 @@ const NewOrdersScreen: React.FC = ({navigation}) => {
         },
         swipeEnabled:true
       });
-    }),
+      if (user.role_id == 2) {
+        dispatch(getRiderDeliveries(user.id));
+      } else {
+        // dispatch(getOrders('delivered'));
+        dispatch(getOrders('neworder'));
+        // dispatch(getOrders('pending'));
+      }
+    },[]),
   );
 
   

@@ -14,6 +14,9 @@ interface InProgressOrderState {
 interface CompletedOrderState {
   completedOrders: any[];
 }
+interface CurrentaDeliveryState {
+  currentDelivery: any;
+}
 
 // Action Interfaces
 interface LoginAction {
@@ -36,17 +39,24 @@ interface CompletedOrderAction {
   payload: any[];
 }
 
+interface CurrentaDeliveryAction {
+  type: 'CURRENTDELIVERY';
+  payload: any;
+}
+
 type AuthAction =
   | LoginAction
   | NewOrderAction
   | InProgressOrderAction
-  | CompletedOrderAction;
+  | CompletedOrderAction
+  | CurrentaDeliveryAction;
 
 const initialState:
   | UserDetails
   | NewOrderState
   | InProgressOrderState
   | CompletedOrderState
+  | CurrentaDeliveryState
   | null = null;
 
 const authReducer = (
@@ -55,6 +65,7 @@ const authReducer = (
     | NewOrderState
     | InProgressOrderState
     | CompletedOrderState
+    | CurrentaDeliveryState
     | null = initialState,
   action: AuthAction,
 ):
@@ -62,7 +73,8 @@ const authReducer = (
   | NewOrderState
   | InProgressOrderState
   | CompletedOrderState
-  | null => {
+  | CurrentaDeliveryState
+  |null => {
   switch (action.type) {
     case 'LOGIN':
       return {
@@ -83,6 +95,11 @@ const authReducer = (
         ...state,
         completedOrders: action.payload,
       };
+    case 'CURRENTDELIVERY':
+      return {
+        ...state,
+        currentDelivery: action.payload,
+      };
     // Handle other action types here
     default:
       return state;
@@ -90,4 +107,3 @@ const authReducer = (
 };
 
 export default authReducer;
-

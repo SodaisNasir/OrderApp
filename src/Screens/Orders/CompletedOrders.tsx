@@ -5,13 +5,17 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { ListComponent } from "../../Components/ListComponent";
 import { completedOrders } from "../../Constants/DummyData";
 import { useFocusEffect } from "@react-navigation/native";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { getOrders } from "../../Redux/Reducers/Actions";
 
 
 
 const CompletedOrdersScreen:React.FC =({navigation})=>{
+  const dispatch = useDispatch()
   const user = useSelector((state: RootState) => state.auth?.userDetails);
   const completedOrders = useSelector((state: RootState) => state.auth?.completedOrders);
+  console.log("completedOrders ===>>", completedOrders);
+  
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
   useFocusEffect(
@@ -27,7 +31,9 @@ const CompletedOrdersScreen:React.FC =({navigation})=>{
         },
         swipeEnabled:true
       });
-    }),
+      dispatch(getOrders('delivered'));
+      console.log("completedOrders ===>>", completedOrders);
+    },[]),
   );
 
     return (

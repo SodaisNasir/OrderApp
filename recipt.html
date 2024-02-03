@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+      <html>
+      <head>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+        }
+        .receipt {
+          max-width: 300px;
+          margin: 0 auto;
+          padding: 20px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          background-color: #fff;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 10px;
+        }
+        .restaurant-info {
+          margin-bottom: 10px;
+          text-align: center;
+        }
+        .restaurant-logo {
+          max-width: 100px;
+          height: auto;
+        }
+        .customer-info {
+          margin-top: 20px;
+        }
+        .info-label {
+          font-weight: bold;
+        }
+        .item {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 5px;
+        }
+        .item-name {
+          flex: 1;
+        }
+        .item-quantity {
+          flex: .1;
+        }
+        .item-price {
+          flex-shrink: 0;
+        }
+        .total {
+          text-align: right;
+          margin-top: 10px;
+          font-weight: bold;
+        }
+      </style>
+      <script src="/Users/macbook/Documents/Projects/OrderApp/QR/qrcode.min.js"></script>
+      </head>
+      <body>
+      
+      <div class="receipt">
+        <div class="header">
+          <h2>Receipt</h2>
+          <p>Date: August 21, 2023</p>
+        </div>
+        
+        <div class="restaurant-info">
+          <img class="restaurant-logo" src="restaurant-logo.png" alt="Restaurant Logo">
+          <p class="info-label">Restaurant:</p>
+          <p>My Restaurant</p>
+          <p>123 Main Street</p>
+          <p>City, State, ZIP</p>
+          <p>Contact: (123) 456-7890</p>
+        </div>
+        
+        <div class="customer-info">
+          <p class="info-label">Customer:</p>
+          <p>John Doe</p>
+          <p>456 Elm Street</p>
+          <p>City, State, ZIP</p>
+        </div>
+        <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center "></div>
+      </div>
+      <script>
+    // Content you want to encode
+    var contentToEncode = 'https://www.example.com'; // Replace with the actual URL or content
+
+    // Create a QRCode instance
+    var qrcode = new QRCode(document.getElementById("qrcode"), {
+        text: contentToEncode,
+        width: 128,
+        height: 128,
+    });
+
+    // Generate the QR code
+    qrcode.makeCode(qrcode);
+</script>
+      </body>
+      </html>
+      

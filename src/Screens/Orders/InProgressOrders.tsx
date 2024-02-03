@@ -5,11 +5,14 @@ import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import {allOrders, newOrders} from '../../Constants/DummyData';
 import {ListComponent} from '../../Components/ListComponent';
 import {useFocusEffect} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
+import { getOrders } from '../../Redux/Reducers/Actions';
 
 const InProgressOrdersScreen: React.FC = ({navigation}) => {
+  const dispatch = useDispatch()
   const user = useSelector((state: RootState) => state.auth?.userDetails);
-  const inprogressOrders = useSelector((state: RootState) => state.auth?.pendingOrders);
+  const inprogressOrders = useSelector((state: RootState) => state.auth?.inProgressOrders);
+  // const inprogressOrders = useSelector((state: RootState) => state.auth?.pendingOrders);
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
   useFocusEffect(
@@ -25,8 +28,10 @@ const InProgressOrdersScreen: React.FC = ({navigation}) => {
         },
         swipeEnabled: true,
       });
-    }),
+      dispatch(getOrders('pending'));
+    },[]),
   );
+  console.log('inprogressOrders', inprogressOrders)
   return (
     <View style={styles.container}>
       <FlatList

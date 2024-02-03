@@ -6,11 +6,13 @@ import {allOrders, newOrders} from '../../Constants/DummyData';
 import { ListComponent } from '../../Components/ListComponent';
 import CustomButton from '../../Components/CustomButton';
 import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SettingsScreen: React.FC = ({navigation}) => {
     const dispatch =  useDispatch();
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
+      await AsyncStorage.removeItem('user')
       const loginAction: Login = {
         type: 'LOGIN',
         payload: null,

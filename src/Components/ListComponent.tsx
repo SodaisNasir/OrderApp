@@ -9,11 +9,13 @@ interface ListComponentProps {
 }
 
 export const ListComponent: React.FC<ListComponentProps> = ({item, onPress}) => {
+  // console.log('item.Shipping_postal_code', item)
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.list,{ backgroundColor: item.status == "pending" ? Colors.textLighestGrey
-        : item.status == 'inprogress'
+      style={[styles.list,{ backgroundColor: item.status == "neworder" ? Colors.textLighestGrey
+        : item.status == 'pending'
+        // : item.status == 'inprogress'
           ? Colors.primaryOrg
           : Colors.lightprimary
          }]}>
@@ -21,28 +23,29 @@ export const ListComponent: React.FC<ListComponentProps> = ({item, onPress}) => 
         <Text
           style={{
             fontSize: scale(12),
-            color: item.status != "pending"  ? Colors.backgroundColor : Colors.textBlue,
+            color: item.status != "neworder"  ? Colors.backgroundColor : Colors.textBlue,
           }}>
           {item.id}
         </Text>
         <Text
           style={{
             fontSize: scale(8),
-            color: item.status != "pending" ? Colors.backgroundColor : Colors.textBlackColor,
+            color: item.status != "neworder" ? Colors.backgroundColor : Colors.textBlackColor,
           }}>
-          {item.Shipping_postal_code}
+          {item.Shipping_postal_code} 
+          {/* {item?.Shipping_address} */}
         </Text>
       </View>
       <View>
         <Text
           style={{
             fontSize: scale(12),
-            color: item.status != "pending" ? Colors.backgroundColor : Colors.textBlue,
-          }}>{`$${item.order_total_price}`}</Text>
+            color: item.status != "neworder" ? Colors.backgroundColor : Colors.textBlue,
+          }}>{`€${item.order_total_price}`}</Text>
         <Text
           style={{
             fontSize: scale(8),
-            color:item.status != "pending" ? Colors.backgroundColor : Colors.textBlackColor,
+            color:item.status != "neworder" ? Colors.backgroundColor : Colors.textBlackColor,
           }}>
           {item.date}
         </Text>

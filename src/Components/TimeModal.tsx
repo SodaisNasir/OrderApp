@@ -35,7 +35,7 @@ const TimeModal: React.FC<ModalComponentProps> = ({
         </View>
         <View style={{flexDirection: 'row', alignItems: 'center'}}>
           <TouchableOpacity onPress={increment}>
-            <Text style={{fontSize: scale(30)}}>+</Text>
+            <Text style={{fontSize: scale(30)}}>-</Text>
           </TouchableOpacity>
           <View
             style={{
@@ -49,7 +49,7 @@ const TimeModal: React.FC<ModalComponentProps> = ({
             <Text>{time}</Text>
           </View>
           <TouchableOpacity onPress={decrement}>
-            <Text style={{fontSize: scale(30)}}>-</Text>
+            <Text style={{fontSize: scale(30)}}>+</Text>
           </TouchableOpacity>
         </View>
         <CustomButton

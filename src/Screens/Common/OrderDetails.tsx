@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../Constants/Colors';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
@@ -17,13 +18,14 @@ import {useFocusEffect} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
-import {imageUrl} from '../../Constants/Urls';
+import {QRCodeUrl, imageUrl} from '../../Constants/Urls';
 import {updateOrderStatus} from '../../Redux/Reducers/Actions';
 import {useDispatch} from 'react-redux';
 
 const OrderDetailsScreen: React.FC = ({navigation, route}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [time, setTime] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [loading2, setLoading2] = useState(false);
+  const [time, setTime] = useState(30);
   const order = route.params.order;
   console.log('order.addons ==>', order.order_details[0]);
 
@@ -35,7 +37,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
       navigation
         .getParent()
         ?.setOptions({tabBarStyle: {display: 'none'}, swipeEnabled: false});
-    }),
+    },[]),
   );
   const itemsData = [
     {name: 'Product 1', price: 100.0},
@@ -54,13 +56,18 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
   //   .join(' ')}
 
   const dispatch = useDispatch();
-  const onConfirm = () => {
-    const status = order.status == 'pending' ? 'inprogress' : 'delivered';
-    // dispatch(updateOrderStatus(status, order.id, printRecpit));
-    printRecpit();
+  const onConfirm = (elmnt) => {
+    const status = order.status == 'neworder' && elmnt == 'canceled' ? 'canceled' : order.status == 'neworder' ? 'pending' : 'delivered';
+    if(elmnt == 'neworder'){
+      dispatch(updateOrderStatus(status, order.id, printRecpit, setLoading));
+    }else{
+      dispatch(updateOrderStatus(status, order.id, printRecpit, setLoading2));
+    }
+    // printRecpit();
   };
 
-  const printRecpit = async () => {
+
+  const printRecpit = async (QRCODE) => {
     const results = await RNHTMLtoPDF.convert({
       html: `<!DOCTYPE html>
       <html>
@@ -115,7 +122,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
           font-weight: bold;
         }
       </style>
-      <script src="/Users/macbook/Documents/Projects/OrderApp/QR/qrcode.min.js"></script>
+      <script ></script>
       </head>
       <body>
       
@@ -133,27 +140,35 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
           <p>City, State, ZIP</p>
           <p>Contact: (123) 456-7890</p>
         </div>
-        ${ order.order_details.deal ?  order.order_details.deal
-          .map(item => {
-            return `<div class="item">
+        ${
+          order.order_details.deal
+            ? order.order_details.deal
+                .map(item => {
+                  return `<div class="item">
       <div class="item-quantity">x${item.qty}</div>
       <div class="item-name">${item.deal_details.deal_name}</div>
-      <div class="item-price">$${item.deal_details.deal_price}</div>
+      <div class="item-price">€${item.deal_details.deal_price}</div>
     
       </div>`;
-          })
-          .join(' ') :  ""}
+                })
+                .join(' ')
+            : ''
+        }
     
-        ${order.order_details.product  ?  order.order_details.product
-          .map(item => {
-            return `<div class="item">
+        ${
+          order.order_details.product
+            ? order.order_details.product
+                .map(item => {
+                  return `<div class="item">
       <div class="item-quantity">x${item.qty}</div>
       <div class="item-name">${item.product_details.name}</div>
-      <div class="item-price">$${item.price}</div>
+      <div class="item-price">€${item.price}</div>
     
       </div>`;
-          })
-          .join(' ') : " "}
+                })
+                .join(' ')
+            : ' '
+        }
     
         ${`<div class="total">
           Total: ${order.order_total_price}
@@ -165,22 +180,12 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
           <p>456 Elm Street</p>
           <p>City, State, ZIP</p>
         </div>
-        <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center "></div>
+        <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center; height: 200px" margin-top:20px>
+        <Img
+        src="${QRCodeUrl}/${QRCODE}"
+        /></div>
+        
       </div>
-      <script>
-    // Content you want to encode
-    var contentToEncode = 'https://www.example.com'; // Replace with the actual URL or content
-
-    // Create a QRCode instance
-    var qrcode = new QRCode(document.getElementById("qrcode"), {
-        text: contentToEncode,
-        width: 128,
-        height: 128,
-    });
-
-    // Generate the QR code
-    qrcode.makeCode(qrcode);
-</script>
       </body>
       </html>
       `,
@@ -246,16 +251,26 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
     });
 
     await RNPrint.print({filePath: results.filePath});
+    setLoading(false);
   };
 
+  const incrtement = () => {
+    setTime(prev => prev + 10);
+  };
+  const decrement = () => {
+    if (time > 0) {
+      setTime(prev => prev - 10);
+    }
+  };
+console.log('order.cstatus', order)
   return (
     <>
       <View
         style={{
           backgroundColor:
-            order.status == 'pending'
+            order.status == 'neworder'
               ? Colors.textLighestGrey
-              : order.status == 'inprogress'
+              : order.status == 'pending'
               ? Colors.primaryOrg
               : Colors.lightprimary,
           paddingHorizontal: scale(15),
@@ -270,9 +285,9 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
           styles.container,
           {
             backgroundColor:
-              order.status == 'pending'
+              order.status == 'neworder'
                 ? Colors.textLighestGrey
-                : order.status == 'inprogress'
+                : order.status == 'pending'
                 ? Colors.primaryOrg
                 : Colors.lightprimary,
           },
@@ -293,8 +308,14 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
               Order Details
             </Text>
             <FlatList
+              style={{height: '100%'}}
               data={order.order_details.product}
-              renderItem={({item}) => (
+              renderItem={({item}) => {
+                const vvv = order.order_total_price - item.price
+                const discountAmount = (vvv * item.discount_percent) / 100;
+                const newDiscountedPrice = item.price + discountAmount;
+                console.log('item  ===v ', newDiscountedPrice )
+                return(
                 <View
                   style={{
                     flexDirection: 'row',
@@ -317,7 +338,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                       style={{
                         height: scale(50),
                         width: scale(50),
-                        backgroundColor: 'red',
+                        // backgroundColor: 'red',
                       }}>
                       <Image
                         style={{height: '100%', width: '100%'}}
@@ -347,7 +368,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                           <ScrollView
                             style={{
                               marginLeft: scale(5),
-                              height: scale(10),
+                              // height: scale(10),
                               width: scale(80),
                             }}>
                             {JSON.parse(item.addons).map(item => (
@@ -374,7 +395,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                                   style={{
                                     color: Colors.iconBackground,
                                     fontSize: scale(8),
-                                  }}>{`$${item.as_price}`}</Text>
+                                  }}>{`€${Number(item.as_price).toFixed(2)}`}</Text>
                               </View>
                             ))}
                           </ScrollView>
@@ -392,20 +413,77 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                       style={{
                         fontSize: scale(9),
                         color: Colors.iconBackground,
-                      }}>{`Price :$${item.price}`}</Text>
+                      }}>{`Price :€${Number(item.price).toFixed(2)}`}</Text>
                   </View>
                 </View>
-              )}
+              )}}
             />
-            {
-              order.order_details.deals && (<>
-            
-          
-              <FlatList
-             data={order.order_details.deals}
-             renderItem={({item}) => (
+            {order.order_details.deals && (
               <>
-              {/* <View
+                <Text style={{fontSize: scale(15), fontWeight: '700'}}>
+                  Deals Details
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginVertical: scale(5),
+                    borderRadius: scale(10),
+                    padding: scale(10),
+                    marginHorizontal: scale(5),
+                    shadowOffset: {
+                      height: scale(1),
+                      width: scale(1),
+                    },
+                    backgroundColor: Colors.backgroundColor,
+                    shadowColor: Colors.iconBackground,
+                    shadowOpacity: 1,
+                  }}>
+                  <View style={{flexDirection: 'row'}}>
+                    <View
+                      style={{
+                        height: scale(50),
+                        width: scale(50),
+                        // backgroundColor: 'red',
+                      }}>
+                      <Image
+                        style={{height: '100%', width: '100%'}}
+                        source={{
+                          uri: `${imageUrl}${order.order_details.deals.deal_details.deal_image}`,
+                        }}
+                      />
+                    </View>
+                    <View style={{marginLeft: scale(5), width: '60%'}}>
+                      <Text
+                        numberOfLines={2}
+                        style={{
+                          fontSize: scale(10),
+                        }}>
+                        {order.order_details.deals.deal_details.deal_name}
+                      </Text>
+                      <Text
+                        numberOfLines={2}
+                        style={{
+                          fontSize: scale(10),
+                        }}>
+                        {
+                          order.order_details.deals.deal_details
+                            .deal_description
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <FlatList
+                  data={order.order_details.deals.deal_product.details}
+                  style={{height: '100%'}}
+                  renderItem={({item}) => {
+                    // console.log('item', item)
+                    return(
+                    <>
+                      {/* <View
                  style={{
                    flexDirection: 'row',
                    alignItems: 'center',
@@ -505,116 +583,115 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                      }}>{`Price :$${item.price}`}</Text>
                  </View>
                </View> */}
-               <View
-                 style={{
-                   flexDirection: 'row',
-                   alignItems: 'center',
-                   justifyContent: 'space-between',
-                   marginVertical: scale(5),
-                   borderRadius: scale(10),
-                   padding: scale(10),
-                   marginHorizontal: scale(5),
-                   shadowOffset: {
-                     height: scale(1),
-                     width: scale(1),
-                   },
-                   backgroundColor: Colors.backgroundColor,
-                   shadowColor: Colors.iconBackground,
-                   shadowOpacity: 1,
-                 }}>
-                 <View style={{flexDirection: 'row'}}>
-                   <View
-                     style={{
-                       height: scale(50),
-                       width: scale(50),
-                       backgroundColor: 'red',
-                     }}>
-                     <Image
-                       style={{height: '100%', width: '100%'}}
-                       source={{
-                         uri: `${imageUrl}${item.product_details.img}`,
-                       }}
-                     />
-                   </View>
-                   <View style={{marginLeft: scale(5), width: '60%'}}>
-                     <Text
-                       numberOfLines={2}
-                       style={{
-                         fontSize: scale(10),
-                       }}>
-                       {item.product_details.name}
-                     </Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginVertical: scale(5),
+                          borderRadius: scale(10),
+                          padding: scale(10),
+                          marginHorizontal: scale(5),
+                          shadowOffset: {
+                            height: scale(1),
+                            width: scale(1),
+                          },
+                          backgroundColor: Colors.backgroundColor,
+                          shadowColor: Colors.iconBackground,
+                          shadowOpacity: 1,
+                        }}>
+                        <View style={{flexDirection: 'row'}}>
+                          <View
+                            style={{
+                              height: scale(50),
+                              width: scale(50),
+                              // backgroundColor: 'red',
+                            }}>
+                            <Image
+                              style={{height: '100%', width: '100%'}}
+                              source={{
+                                uri: `${imageUrl}${item.products_items.img}`,
+                              }}
+                            />
+                          </View>
+                          <View style={{marginLeft: scale(5), width: '60%'}}>
+                            <Text
+                              numberOfLines={2}
+                              style={{
+                                fontSize: scale(10),
+                              }}>
+                              {item.products_items.name}
+                            </Text>
 
-                     {item.addons && JSON.parse(item.addons).length > 0 && (
-                       <>
-                         <Text
-                           style={{
-                             fontSize: scale(9),
-                             fontWeight: 'bold',
-                           }}>
-                           AddOns
-                         </Text>
-                         <ScrollView
-                           style={{
-                             marginLeft: scale(5),
-                             height: scale(10),
-                             width: scale(80),
-                           }}>
-                           {JSON.parse(item.addons).map(item => (
-                             <View
-                               style={{
-                                 flexDirection: 'row',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                               }}>
-                               <Text
-                                 style={{
-                                   color: Colors.iconBackground,
+                            {item.addons &&
+                              JSON.parse(item.addons).length > 0 && (
+                                <>
+                                  <Text
+                                    style={{
+                                      fontSize: scale(9),
+                                      fontWeight: 'bold',
+                                    }}>
+                                    AddOns
+                                  </Text>
+                                  <ScrollView
+                                    style={{
+                                      marginLeft: scale(5),
+                                      // height: scale(10),
+                                      width: scale(80),
+                                    }}>
+                                    {JSON.parse(item.addons).map(item => (
+                                      <View
+                                        style={{
+                                          flexDirection: 'row',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                        }}>
+                                        <Text
+                                          style={{
+                                            color: Colors.iconBackground,
 
-                                   fontSize: scale(8),
-                                 }}>
-                                 {item.as_name}
-                               </Text>
-                               <Text
-                                 style={{
-                                   color: Colors.iconBackground,
-                                   fontSize: scale(8),
-                                 }}>{`x${item.quantity}`}</Text>
-                               <Text
-                                 style={{
-                                   color: Colors.iconBackground,
-                                   fontSize: scale(8),
-                                 }}>{`$${item.as_price}`}</Text>
-                             </View>
-                           ))}
-                         </ScrollView>
-                       </>
-                     )}
-                   </View>
-                 </View>
-                 <View>
-                   <Text
-                     style={{
-                       fontSize: scale(9),
-                       color: Colors.iconBackground,
-                     }}>{`Qty : ${item.qty}`}</Text>
-                   <Text
-                     style={{
-                       fontSize: scale(9),
-                       color: Colors.iconBackground,
-                     }}>{`Price :$${item.price}`}</Text>
-                 </View>
-               </View>
+                                            fontSize: scale(8),
+                                          }}>
+                                          {item.as_name}
+                                        </Text>
+                                        <Text
+                                          style={{
+                                            color: Colors.iconBackground,
+                                            fontSize: scale(8),
+                                          }}>{`x${item.quantity}`}</Text>
+                                        <Text
+                                          style={{
+                                            color: Colors.iconBackground,
+                                            fontSize: scale(8),
+                                          }}>{`€${Number(item.as_price).toFixed(2)}`}</Text>
+                                      </View>
+                                    ))}
+                                  </ScrollView>
+                                </>
+                              )}
+                          </View>
+                        </View>
+                        <View>
+                          <Text
+                            style={{
+                              fontSize: scale(9),
+                              color: Colors.iconBackground,
+                            }}>{`Qty : ${item.qty}`}</Text>
+                          <Text
+                            style={{
+                              fontSize: scale(9),
+                              color: Colors.iconBackground,
+                            }}>{`Price :€${Number(item.price).toFixed(2)}`}</Text>
+                        </View>
+                      </View>
+                    </>
+                  )}}
+                />
               </>
-             )}
-           />
-              </>
-              )
-            }
-            
+            )}
 
             <View style={{alignSelf: 'flex-end', marginBottom: scale(30)}}>
-              <Text>{`Total Amount :$${order.order_total_price}`} </Text>
+              <Text>{`Total Amount :€${order.order_total_price}`} </Text>
 
               <Text style={{alignSelf: 'center'}}>
                 Status :
@@ -622,7 +699,7 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                   style={{
                     fontSize: scale(10),
                     color:
-                      order.status == 'pending'
+                      order.status == 'neworder'
                         ? Colors.textBlue
                         : order.status == 'delivered'
                         ? Colors.lightprimary
@@ -660,8 +737,8 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                 <Text>Time To Deliver / Prepare (Minutes)</Text>
               </View>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <TouchableOpacity onPress={() => setTime(time + 10)}>
-                  <Text style={{fontSize: scale(30)}}>+</Text>
+                <TouchableOpacity onPress={decrement}>
+                  <Text style={{fontSize: scale(30)}}>-</Text>
                 </TouchableOpacity>
                 <View
                   style={{
@@ -674,8 +751,8 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                   }}>
                   <Text>{time}</Text>
                 </View>
-                <TouchableOpacity onPress={() => setTime(time + 10)}>
-                  <Text style={{fontSize: scale(30)}}>-</Text>
+                <TouchableOpacity onPress={incrtement}>
+                  <Text style={{fontSize: scale(30)}}>+</Text>
                 </TouchableOpacity>
               </View>
               {/* <CustomButton
@@ -699,32 +776,51 @@ const OrderDetailsScreen: React.FC = ({navigation, route}) => {
                 borderBottomLeftRadius: scale(10),
                 borderBottomRightRadius: scale(10),
               }}>
-              {order.status == 'pending' && (
-                <>
+              {order.status == 'neworder' && (
+                <View style={{flexDirection:'row',height:'100%',}}>
+
                   <TouchableOpacity
-                    onPress={onConfirm}
+                    onPress={ !loading ?() => onConfirm('neworder') : () => null}
                     style={[
-                      styles.bottomButtons,
+                      // styles.bottomButtons,
                       {
-                        width: '100%',
+                        height: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        // width: '100%',
                         borderBottomLeftRadius: scale(10),
+                        // borderBottomRightRadius: scale(10),
+                        width: '50%',
+                        // borderBottomLeftRadius: scale(10),
                         backgroundColor: Colors.lightprimary,
                       },
                     ]}>
-                    <Text>Confirm</Text>
+                   { !loading  ? (<Text>Confirm</Text>) : (<ActivityIndicator size={"large"} color={Colors.textLighestGrey}/>)}
                   </TouchableOpacity>
-                </>
+                  <TouchableOpacity
+                    onPress={ !loading2 ?() => onConfirm('canceled') : () => null}
+                    style={[
+                      // styles.bottomButtons,
+                      {
+                        height: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        // width: '100%',
+                        // borderBottomLeftRadius: scale(10),
+                        borderBottomRightRadius: scale(10),
+                        width: '50%',
+                        // borderBottomLeftRadius: scale(10),
+                        backgroundColor: Colors.secondary,
+                      },
+                    ]}>
+                   { !loading2  ? (<Text>Cancel</Text>) : (<ActivityIndicator size={"large"} color={Colors.textLighestGrey}/>)}
+                  </TouchableOpacity>
+
+                </View>
               )}
             </View>
           )}
         </View>
-        <TimeModal
-          increment={() => setTime(time + 10)}
-          decrement={() => setTime(time - 10)}
-          time={time}
-          isVisible={isVisible}
-          onBackdropPress={() => setIsVisible(false)}
-        />
       </View>
     </>
   );
