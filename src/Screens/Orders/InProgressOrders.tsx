@@ -31,7 +31,7 @@ const InProgressOrdersScreen: React.FC = ({navigation}) => {
       dispatch(getOrders('pending'));
     },[]),
   );
-  console.log('inprogressOrders', inprogressOrders)
+  // console.log('inprogressOrders', inprogressOrders)
   return (
     <View style={styles.container}>
       <FlatList
@@ -40,6 +40,9 @@ const InProgressOrdersScreen: React.FC = ({navigation}) => {
         renderItem={({item}) => (
           <ListComponent
             item={item}
+            // onPress={() =>
+            //   navigation.navigate('NewOrderDetail', {order: item, type})
+            // }
             onPress={() =>
               navigation.navigate('Order Details', {order: item, type})
             }

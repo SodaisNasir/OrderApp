@@ -177,3 +177,19 @@ export const getRiderDeliveries = (riderID: number) => {
     }
   };
 };
+export const getPDFData = async  ( setData: any,id: any) => {
+try {
+  var requestOptions = {
+    method: 'get',
+  };
+
+  const response = await fetch(
+    `https://xn--pizzablitzstringen-m3b.de/pizza_blitz/admin_panel/reciept.php?order_id=${id}`,
+    requestOptions,
+  );
+  const responseData = await response.text()
+    setData(responseData)
+} catch (error) {
+  console.log('getPDFData error', error)
+}
+}

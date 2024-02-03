@@ -32,7 +32,7 @@ const CompletedOrdersScreen:React.FC =({navigation})=>{
         swipeEnabled:true
       });
       dispatch(getOrders('delivered'));
-      console.log("completedOrders ===>>", completedOrders);
+      // console.log("completedOrders ===>>", completedOrders);
     },[]),
   );
 

@@ -9,6 +9,7 @@ import {Colors} from '../Constants/Colors';
 import OrderDetailsScreen from '../Screens/Common/OrderDetails';
 import SettingsScreen from '../Screens/Common/Settings';
 import InProgressOrdersScreen from '../Screens/Orders/InProgressOrders';
+import NewOrderDetail from '../Screens/Common/NewOrderDetail';
 
 const MaterialTabs = createMaterialTopTabNavigator();
 const Stack = createStackNavigator();
@@ -25,6 +26,11 @@ const NewOrderStack = () => {
         name="Order Details"
         // options={(focused)=>}
         component={OrderDetailsScreen}
+      />
+      <Stack.Screen
+        name="NewOrderDetail"
+        // options={(focused)=>}
+        component={NewOrderDetail}
       />
     </Stack.Navigator>
   );
