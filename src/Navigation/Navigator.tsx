@@ -7,7 +7,7 @@ import { KitchenTabs } from './Orders';
 import { RiderTabs } from './Rider';
 export const Navigator: React.FC = ()=>{
 const user = useSelector((state:RootState)=> state.auth?.userDetails);
-console.log("USR ==>",user?.email);
+console.log("USR ==>",user);
 
     return (
         <NavigationContainer>
