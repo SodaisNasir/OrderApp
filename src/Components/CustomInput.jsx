@@ -2,7 +2,7 @@ import React, { forwardRef, useState } from 'react';
 import { useController } from 'react-hook-form';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import { Colors } from '../Constants/Colors';
+import { Colors } from '../../important/Colors';
 import Entypo from 'react-native-vector-icons/Entypo';
 
 const CustomTextInput = forwardRef((props, ref) => {

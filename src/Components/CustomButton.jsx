@@ -3,7 +3,7 @@ import React from 'react';
 import { scale, verticalScale } from 'react-native-size-matters';
 import Entypo from 'react-native-vector-icons/Entypo';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import { Colors } from '../Constants/Colors';
+import { Colors } from '../../important/Colors';
 
 const CustomButton = (props) => {
   return (

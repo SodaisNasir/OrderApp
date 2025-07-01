@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiUrl } from '../../Constants/Urls';
+import { apiUrl } from '../../../important/Urls';
 
 // LOGIN
 export const Login = (data,setLoader) => {
@@ -18,10 +18,10 @@ export const Login = (data,setLoader) => {
       };
 
       const response = await fetch(`${apiUrl}login-app`, requestOptions);
-      console.log('response', response)
+      // console.log('response', response)
       if (response?.ok) {
         const data = await response.json();
-        console.log('DATA ==>', data);
+        // console.log('DATA ==>', data);
         if (data?.error?.status === 400) {
           alert(data?.error?.message);
         } else {
@@ -70,7 +70,7 @@ export const getOrders = (type) => {
 
     const response = await fetch(`${apiUrl}get-orders`, requestOptions);
 
-    console.log('response', response)
+    // console.log('response', response)
     if (response.ok) {
       const data = await response.json();
       console.log('DATA in getOrders ==>', data.success.user);

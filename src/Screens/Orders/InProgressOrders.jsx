@@ -1,56 +1,67 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList } from 'react-native';
-import { Colors } from '../../Constants/Colors';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import { ListComponent } from '../../Components/ListComponent';
-import { useFocusEffect } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
-import { getOrders } from '../../Redux/Reducers/Actions';
+import React, {useCallback} from 'react';
+import {StyleSheet, View, Text, FlatList} from 'react-native';
+import {Colors} from '../../../important/Colors';
+import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import {ListComponent} from '../../Components/ListComponent';
+import {useFocusEffect} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
+import {getOrders} from '../../Redux/Reducers/Actions';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const InProgressOrdersScreen = ({ navigation }) => {
+const InProgressOrdersScreen = ({navigation}) => {
   const dispatch = useDispatch();
 
-  const user = useSelector((state) => state.auth?.userDetails);
-  const inprogressOrders = useSelector((state) => state.auth?.inProgressOrders);
+  const user = useSelector(state => state.auth?.userDetails);
+  const inprogressOrders = useSelector(state => state.auth?.inProgressOrders);
 
   const type = user?.role_id === '1' ? 'kitchen' : null;
 
   useFocusEffect(
     useCallback(() => {
       navigation.getParent()?.setOptions({
-        tabBarLabelStyle: {
-          fontSize: scale(8),
-          color: Colors.backgroundColor,
-        },
-        tabBarStyle: { backgroundColor: Colors.primary },
-        tabBarActiveTintColor: 'red',
-        tabBarIndicatorStyle: {
-          backgroundColor: 'red',
-        },
+        tabBarStyle: {display: 'flex', backgroundColor: Colors.primary},
         swipeEnabled: true,
       });
 
       dispatch(getOrders('pending'));
-    }, [dispatch, navigation])
+    }, []),
   );
 
   return (
     <View style={styles.container}>
       <FlatList
-        style={{ flex: 1, marginTop: verticalScale(10) }}
+        style={{flex: 1, marginTop: verticalScale(10)}}
         data={inprogressOrders}
         keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
+        renderItem={({item}) => (
           <ListComponent
             item={item}
             onPress={() =>
-              navigation.navigate('Order Details', { order: item, type })
+              navigation.navigate('Order Details', {order: item, type})
             }
           />
         )}
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Text>No Orders</Text>
+          <View
+            style={{
+              flex: 1,
+              marginTop: '80%',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <MaterialCommunityIcons
+              name="file-search-outline"
+              color={Colors.primary}
+              size={80}
+            />
+            <Text
+              style={{
+                alignSelf: 'center',
+                marginTop: 15,
+                fontSize: 18,
+              }}>
+              No Pending Order
+            </Text>
           </View>
         }
       />

@@ -41,7 +41,7 @@ const NewOrderDetail = ({ navigation, route }) => {
                   height: '100%',
                   width: '100%',
                 }}
-                source={require('../../Constants/Images/ic_launcher_round.png')}
+                source={require('../../../important/Images/ic_launcher_round.png')}
               />
             </View>
           </View>

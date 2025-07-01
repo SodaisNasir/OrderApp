@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, StyleSheet, View, Text } from 'react-native';
-import { Colors } from '../../Constants/Colors';
+import { Colors } from '../../../important/Colors';
 import CustomTextInput from '../../Components/CustomInput';
 import { useForm } from 'react-hook-form';
 import { moderateScale, scale } from 'react-native-size-matters';
@@ -140,6 +140,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: Colors.iconBackground,
+    fontSize: 20,
+    fontFamily: 'OpenSans-Bold',
   },
 });
 
