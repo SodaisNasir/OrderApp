@@ -24,7 +24,9 @@ import {QRCodeUrl, imageUrl} from '../../../important/Urls';
 import {getPDFData, updateOrderStatus} from '../../Redux/Reducers/Actions';
 import {useDispatch} from 'react-redux';
 import ThermalPrinter from 'react-native-thermal-printer';
+import { useBluetoothStatus, BluetoothStatus } from 'react-native-bluetooth-status';
 import { PoppinsFont } from '../../Constants/fonts';
+import Toast from 'react-native-simple-toast';
 
 const OrderDetailsScreen = ({navigation, route}) => {
   const [loading, setLoading] = useState(false);
@@ -37,8 +39,14 @@ const OrderDetailsScreen = ({navigation, route}) => {
   const [pdfData, setpdfData] = useState(null);
   const navigationRoute = useNavigation()
 
-  console.log('order', JSON.stringify(order));
-  
+  // console.log('order', JSON.stringify(order));
+
+const check = async () =>{
+  const isEnabled = await BluetoothStatus.state();
+  console.log("check bluetooth on or off", isEnabled);
+}
+
+check()
 
   useFocusEffect(
     useCallback(() => {
@@ -50,13 +58,27 @@ const OrderDetailsScreen = ({navigation, route}) => {
   );
 
   const dispatch = useDispatch();
-  const onConfirm = elmnt => {
+  const onConfirm = async(elmnt) => {
     const status =
       order.status == 'neworder' && elmnt == 'canceled'
         ? 'canceled'
         : order.status == 'neworder'
         ? 'pending'
         : 'delivered';
+        try {
+          const connectedPrinter = await BluetoothStatus.state(); 
+      
+          if (connectedPrinter == false) {
+            Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+            return;
+          } else {
+            Toast.show('No Bluetooth printer connected', Toast.SHORT);
+            return
+          }
+        } catch (error) {
+          Toast.show('Printer not connected', Toast.SHORT);
+          return;
+        }
     if (elmnt == 'neworder') {
       dispatch(updateOrderStatus(status, order.id, printReceipt, setLoading));
     } else {
@@ -271,9 +293,10 @@ const OrderDetailsScreen = ({navigation, route}) => {
 
   useEffect(() => {
     if (Platform.OS === 'android') {
-      PermissionsAndroid.request(
+      PermissionsAndroid.requestMultiple([
         PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-      );
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      ]);
     }
 
     const fetchDevices = async () => {

@@ -25,7 +25,7 @@ const NewOrdersScreen = ({navigation}) => {
   const user = useSelector(state => state.auth?.userDetails);
   const orders = useSelector(state => state.auth?.newOrders);
 
-  console.log('orders', JSON.stringify(orders))
+  // console.log('orders', JSON.stringify(orders))
 
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
