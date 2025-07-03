@@ -24,7 +24,7 @@ import {QRCodeUrl, imageUrl} from '../../../important/Urls';
 import {getPDFData, updateOrderStatus} from '../../Redux/Reducers/Actions';
 import {useDispatch} from 'react-redux';
 import ThermalPrinter from 'react-native-thermal-printer';
-import { useBluetoothStatus, BluetoothStatus } from 'react-native-bluetooth-status';
+import { BluetoothStateManager } from "react-native-bluetooth-state-manager";
 import { PoppinsFont } from '../../Constants/fonts';
 import Toast from 'react-native-simple-toast';
 
@@ -41,21 +41,32 @@ const OrderDetailsScreen = ({navigation, route}) => {
 
   // console.log('order', JSON.stringify(order));
 
-const check = async () =>{
-  const isEnabled = await BluetoothStatus.state();
-  console.log("check bluetooth on or off", isEnabled);
-}
-
-check()
-
   useFocusEffect(
     useCallback(() => {
       navigation
         .getParent()
         ?.setOptions({tabBarStyle: {display: 'none'}, swipeEnabled: false});
       getPDFData(setpdfData, order?.id);
-    }, []),
-  );
+        if (Platform.OS === 'android') {
+         PermissionsAndroid.requestMultiple([
+           PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+             PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          ]);
+            }
+        const fetchDevices = async () => {
+      try {
+        const list = await ThermalPrinter.getBluetoothDeviceList();
+        console.log('Devices:', list);
+        setDevices(list);
+        if (list.length > 0) setSelectedMac(list[0].macAddress);
+      } catch (err) {
+        console.log('Error getting devices', err);
+      }
+    };
+
+    fetchDevices();
+  }, []),
+);
 
   const dispatch = useDispatch();
   const onConfirm = async(elmnt) => {
@@ -66,20 +77,46 @@ check()
         ? 'pending'
         : 'delivered';
         try {
-          const connectedPrinter = await BluetoothStatus.state(); 
+          const connectedPrinter = await BluetoothStateManager.getState();
       
-          if (connectedPrinter == false) {
+          if (connectedPrinter == 'PoweredOff') {
             Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+            await BluetoothStateManager.requestToEnable();
             return;
-          } else {
-            Toast.show('No Bluetooth printer connected', Toast.SHORT);
-            return
           }
-        } catch (error) {
-          Toast.show('Printer not connected', Toast.SHORT);
-          return;
-        }
-    if (elmnt == 'neworder') {
+
+        //   const deviceList = await ThermalPrinter.getBluetoothDeviceList();
+        // setDevices(deviceList); // optional: update state for UI
+
+    if (!devices || devices.length === 0) {
+      Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+      await BluetoothStateManager.openSettings();
+      return;
+    }
+
+    if (devices.length > 1) {
+      Toast.show('Multiple Bluetooth devices found. Please unpair others to avoid conflict.', Toast.LONG);
+      await BluetoothStateManager.openSettings();
+      return;
+    }
+
+    const selectedPrinter = devices[0];
+
+    // Optional: You may validate the printer name prefix
+    if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
+      Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
+      return;
+    }
+
+    // Set selected MAC address and proceed with print
+    setSelectedMac(selectedPrinter.macAddress);
+
+  } catch (error) {
+    console.log('Bluetooth error:', error);
+    Toast.show('Bluetooth error. Make sure a printer is paired and connected.', Toast.LONG);
+    return;
+  }
+    if (elmnt === 'neworder') {
       dispatch(updateOrderStatus(status, order.id, printReceipt, setLoading));
     } else {
       dispatch(updateOrderStatus(status, order.id, printReceipt, setLoading2));
@@ -290,31 +327,6 @@ check()
       setTime(prev => prev - 10);
     }
   };
-
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-      ]);
-    }
-
-    const fetchDevices = async () => {
-      try {
-        const list = await ThermalPrinter.getBluetoothDeviceList();
-        console.log('Devices:', list);
-        setDevices(list);
-        if (list.length > 0) setSelectedMac(list[0].macAddress);
-      } catch (err) {
-        console.log('Error getting devices', err);
-      }
-    };
-
-    fetchDevices();
-  }, []);
-
-  console.log('devices', devices);
-
 
 //   const allExtraPrice = order.order_details?.product?.reduce((total, elem) => {
 //   const addons = JSON.parse(elem.addons || '[]');

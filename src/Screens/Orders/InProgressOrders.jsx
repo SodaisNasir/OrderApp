@@ -1,5 +1,5 @@
-import React, {useCallback} from 'react';
-import {StyleSheet, View, Text, FlatList} from 'react-native';
+import React, {useCallback, useState} from 'react';
+import {StyleSheet, View, Text, FlatList, RefreshControl} from 'react-native';
 import {Colors} from '../../../important/Colors';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
 import {ListComponent} from '../../Components/ListComponent';
@@ -13,6 +13,7 @@ const InProgressOrdersScreen = ({navigation}) => {
 
   const user = useSelector(state => state.auth?.userDetails);
   const inprogressOrders = useSelector(state => state.auth?.inProgressOrders);
+    const [isRefreshing, setIsRefreshing] = useState(false)
 
   const type = user?.role_id === '1' ? 'kitchen' : null;
 
@@ -23,9 +24,18 @@ const InProgressOrdersScreen = ({navigation}) => {
         swipeEnabled: true,
       });
 
-      dispatch(getOrders('pending'));
+      handleRefresh()
     }, []),
   );
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await dispatch(getOrders('pending'));
+    setIsRefreshing(false);
+  };
+
+  console.log('inprogressOrders', inprogressOrders)
+  
 
   return (
     <View style={styles.container}>
@@ -41,6 +51,12 @@ const InProgressOrdersScreen = ({navigation}) => {
             }
           />
         )}
+        refreshControl={
+          <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={()=> handleRefresh()}
+          />
+          }
         ListEmptyComponent={
           <View
             style={{

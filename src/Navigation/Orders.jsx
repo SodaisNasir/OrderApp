@@ -75,8 +75,7 @@ export const KitchenTabs = () => {
     <BottomTab.Navigator
       screenOptions={{
         tabBarLabelStyle: {fontSize: scale(8), color: Colors.backgroundColor},
-        tabBarStyle: {backgroundColor: Colors.primary, transform: []},
-        tabBarActiveTintColor: 'red',
+        tabBarStyle: {backgroundColor: Colors.primary, transform: [],},
       }}>
       <BottomTab.Screen
         name="New Orders"

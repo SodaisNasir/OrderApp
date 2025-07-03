@@ -1054,11 +1054,6 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@cs125/wait-until@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@cs125/wait-until/-/wait-until-0.0.3.tgz#957fc279121704845300dac47ee37a3b34c203d2"
-  integrity sha512-Z3+GXZbAjiiI0cJi1si+WfBBPfmLwZ9Tk4wqyFJGeZHJilyveBCpSktHdJlmqjHBBvrMi8ymXefYi2S833LhRA==
-
 "@egjs/hammerjs@^2.0.17":
   version "2.0.17"
   resolved "https://registry.yarnpkg.com/@egjs/hammerjs/-/hammerjs-2.0.17.tgz#5dc02af75a6a06e4c2db0202cae38c9263895124"
@@ -5884,13 +5879,6 @@ react-native-bluetooth-state-manager@^2.0.2:
   resolved "https://registry.yarnpkg.com/react-native-bluetooth-state-manager/-/react-native-bluetooth-state-manager-2.0.2.tgz#5990d4a5dd4ca2334e3a42988abd2f0357232453"
   integrity sha512-W8aC6TszrlOltgS/FEbEfRGLQJAW6AtX3YJN+64KajDcQZnBcSUM7v5yFNHj1c1j1N94QkqcGvhD3ZoKbqZUXg==
 
-react-native-bluetooth-status@^1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/react-native-bluetooth-status/-/react-native-bluetooth-status-1.5.1.tgz#3cb7d528b146fe15a0fc6127963f259901cbf3ab"
-  integrity sha512-d+7NvFhLh3FRJOWWrJQjDwg/X9KILViEwLW2BBocIBsWGdFoZR51oXUKkR/FpMZ03AQiedKMDOTbP9nKBIVIEg==
-  dependencies:
-    "@cs125/wait-until" "^0.0.3"
-
 react-native-camera-kit@^15.1.0:
   version "15.1.0"
   resolved "https://registry.yarnpkg.com/react-native-camera-kit/-/react-native-camera-kit-15.1.0.tgz#5356f4bdfee64d4486520f68b3ad64740697eece"
@@ -5926,6 +5914,11 @@ react-native-modal@^14.0.0-rc.1:
   integrity sha512-v5pvGyx1FlmBzdHyPqBsYQyS2mIJhVmuXyNo5EarIzxicKhuoul6XasXMviGcXboEUT0dTYWs88/VendojPiVw==
   dependencies:
     react-native-animatable "1.4.0"
+
+react-native-nitro-modules@^0.26.3:
+  version "0.26.3"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-modules/-/react-native-nitro-modules-0.26.3.tgz#80d7d01fe1b9f657182f5b886f74ac37e185423d"
+  integrity sha512-M6XXalSeRhz3X44vxlRnmRAcyTfC3EHxKBsAKHRNlTtVyu9IUQeUBBtjtIZgK6CM3km1387buYtRVIg6XGmoGQ==
 
 react-native-onesignal@^5.2.12:
   version "5.2.12"

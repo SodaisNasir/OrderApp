@@ -73,24 +73,24 @@ export const getOrders = (type) => {
     // console.log('response', response)
     if (response.ok) {
       const data = await response.json();
-      console.log('DATA in getOrders ==>', data.success.user);
+      // console.log('DATA in getOrders ==>', data.success.user);
 
       let OrderAction;
 
       if (type === 'neworder') {
         OrderAction = {
           type: 'NEWORDERS',
-          payload: data.success.user,
+          payload: data?.success?.user,
         };
       } else if (type === 'pending') {
         OrderAction = {
           type: 'INPROGRESSORDERS',
-          payload: data.success.user,
+          payload: data?.success?.user,
         };
       } else {
         OrderAction = {
           type: 'COMPLETEORDERS',
-          payload: data.success.user,
+          payload: data?.success?.user,
         };
       }
 

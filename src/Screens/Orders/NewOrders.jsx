@@ -4,6 +4,7 @@ import {
   FlatList,
   PermissionsAndroid,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -19,7 +20,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 
 const NewOrdersScreen = ({navigation}) => {
   const dispatch = useDispatch();
-  const [devices, setDevices] = useState([]);
+  const [devices, setDevices] = useState([]);  
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedMac, setSelectedMac] = useState(null);
 
   const user = useSelector(state => state.auth?.userDetails);
@@ -35,14 +37,27 @@ const NewOrdersScreen = ({navigation}) => {
         tabBarStyle: {display: 'flex', backgroundColor: Colors.primary},
         swipeEnabled: true,
       });
+        setIsRefreshing(true);
+        if (user?.role_id == 2) {
+          dispatch(getRiderDeliveries(user.id));
+        } else {
+          dispatch(getOrders('neworder'));
+        }
+        setIsRefreshing(false);
+      }, []),
+    );
 
-      if (user?.role_id == 2) {
-        dispatch(getRiderDeliveries(user.id));
-      } else {
-        dispatch(getOrders('neworder'));
-      }
-    }, []),
-  );
+    const handleRefresh = async () => {
+  setIsRefreshing(true);
+  
+  if (user?.role_id == 2) {
+    await dispatch(getRiderDeliveries(user.id));
+  } else {
+    await dispatch(getOrders('neworder'));
+  }
+
+  setIsRefreshing(false);
+};
 
   //   const printRecpit = async QRCODE => {
   //     const results = await RNHTMLtoPDF.convert({
@@ -351,38 +366,38 @@ const NewOrdersScreen = ({navigation}) => {
       );
     }
 
-    const fetchDevices = async () => {
-      try {
-        const list = await ThermalPrinter.getBluetoothDeviceList();
-        console.log('Devices:', list);
-        setDevices(list);
-        if (list.length > 0) setSelectedMac(list[0].macAddress);
-      } catch (err) {
-        console.log('Error getting devices', err);
-      }
-    };
+    // const fetchDevices = async () => {
+    //   try {
+    //     const list = await ThermalPrinter.getBluetoothDeviceList();
+    //     console.log('Devices:', list);
+    //     setDevices(list);
+    //     if (list.length > 0) setSelectedMac(list[0].macAddress);
+    //   } catch (err) {
+    //     console.log('Error getting devices', err);
+    //   }
+    // };
 
-    fetchDevices();
+    // fetchDevices();
   }, []);
 
-  const orderData = {
-    orderNo: 123456,
-    date: '2025-06-05 10:54',
-    phone: '+4917682540212',
-    email: 'Jonas.bender.1@web.de',
-    items: [
-      {name: 'Schnitzel Gorgonzola', qty: 3, price: 47.7},
-      {name: 'Pizza Margherita', qty: 2, price: 19.8},
-      {name: 'Cola 0.5L', qty: 4, price: 7.6},
-    ],
-    paymentMethod: 'Cash',
-    subtotal: 75.1,
-    discount: 0.0,
-    delivery: 0.0,
-    tax7: 5.26,
-    tax19: 0.0,
-    total: 75.1,
-  };
+  // const orderData = {
+  //   orderNo: 123456,
+  //   date: '2025-06-05 10:54',
+  //   phone: '+4917682540212',
+  //   email: 'Jonas.bender.1@web.de',
+  //   items: [
+  //     {name: 'Schnitzel Gorgonzola', qty: 3, price: 47.7},
+  //     {name: 'Pizza Margherita', qty: 2, price: 19.8},
+  //     {name: 'Cola 0.5L', qty: 4, price: 7.6},
+  //   ],
+  //   paymentMethod: 'Cash',
+  //   subtotal: 75.1,
+  //   discount: 0.0,
+  //   delivery: 0.0,
+  //   tax7: 5.26,
+  //   tax19: 0.0,
+  //   total: 75.1,
+  // };
 
   // const htmlTemplate = `
   //  <!DOCTYPE html>
@@ -480,59 +495,59 @@ const NewOrdersScreen = ({navigation}) => {
 
   // console.log(textPayload)
 
-  const printReceipt = async () => {
-    const payload = `
-                pizzablitz.de
-         Kuhngasse 1, 76684 Östringen
-              Tel: 0725326560-61
+//   const printReceipt = async () => {
+//     const payload = `
+//                 pizzablitz.de
+//          Kuhngasse 1, 76684 Östringen
+//               Tel: 0725326560-61
 
-            Bestellung Nr: ${orderData.orderNo}
+//             Bestellung Nr: ${orderData.orderNo}
 
-              Datum: ${orderData.date}
-            Telefon: ${orderData.phone}
-          Email: ${orderData.email}
+//               Datum: ${orderData.date}
+//             Telefon: ${orderData.phone}
+//           Email: ${orderData.email}
 
-------------------------------------------------
-Menge         Produkt                 Preis
-------------------------------------------------
-${orderData.items
-  .map(
-    item =>
-      `${item.qty.toString().padEnd(6)}     ${item.name
-        .slice(0, 14)
-        .padEnd(14)}              ${item.price.toFixed(2)}`,
-  )
-  .join('\n')}
+// ------------------------------------------------
+// Menge         Produkt                 Preis
+// ------------------------------------------------
+// ${orderData.items
+//   .map(
+//     item =>
+//       `${item.qty.toString().padEnd(6)}     ${item.name
+//         .slice(0, 14)
+//         .padEnd(14)}              ${item.price.toFixed(2)}`,
+//   )
+//   .join('\n')}
 
-------------------------------------------------
-Zwischensumme:                         ${orderData.subtotal.toFixed(2)}
+// ------------------------------------------------
+// Zwischensumme:                         ${orderData.subtotal.toFixed(2)}
 
-Rabatt:                                ${orderData.discount.toFixed(2)}
+// Rabatt:                                ${orderData.discount.toFixed(2)}
 
-Lieferung:                             ${orderData.delivery.toFixed(2)}
+// Lieferung:                             ${orderData.delivery.toFixed(2)}
 
-MwSt. (7%):                            ${orderData.tax7.toFixed(2)}
+// MwSt. (7%):                            ${orderData.tax7.toFixed(2)}
 
-MwSt. (19%):                           ${orderData.tax19.toFixed(2)}
------------------------------------------------
-Gesamt:                                ${orderData.total.toFixed(2)}
+// MwSt. (19%):                           ${orderData.tax19.toFixed(2)}
+// -----------------------------------------------
+// Gesamt:                                ${orderData.total.toFixed(2)}
 
-Zahlungsmethode:           ${orderData.paymentMethod}
-================================================
-                  Vielen Dank!
-`;
-    try {
-      const result = await ThermalPrinter.printBluetooth({
-        payload,
-        macAddress: selectedMac,
-        printerWidthMM: 58,
-        printerNbrCharactersPerLine: 42,
-      });
-      console.log('Printed result:', result);
-    } catch (error) {
-      console.log('Print error:', error);
-    }
-  };
+// Zahlungsmethode:           ${orderData.paymentMethod}
+// ================================================
+//                   Vielen Dank!
+// `;
+//     try {
+//       const result = await ThermalPrinter.printBluetooth({
+//         payload,
+//         macAddress: selectedMac,
+//         printerWidthMM: 58,
+//         printerNbrCharactersPerLine: 42,
+//       });
+//       console.log('Printed result:', result);
+//     } catch (error) {
+//       console.log('Print error:', error);
+//     }
+//   };
 
   return (
     <View style={styles.container}>
@@ -549,6 +564,12 @@ Zahlungsmethode:           ${orderData.paymentMethod}
             }
           />
         )}
+         refreshControl={
+              <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={()=> handleRefresh()}
+              />
+              }
         ListEmptyComponent={
           <View style={{ flex: 1, marginTop: '80%', alignItems: "center", justifyContent: 'center',}}>
                   <MaterialCommunityIcons
