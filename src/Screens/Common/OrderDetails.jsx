@@ -20,7 +20,7 @@ import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
-import {QRCodeUrl, imageUrl} from '../../../important/Urls';
+import {QRCodeUrl, apiUrl, imageUrl} from '../../../important/Urls';
 import {getPDFData, updateOrderStatus} from '../../Redux/Reducers/Actions';
 import {useDispatch} from 'react-redux';
 import ThermalPrinter from 'react-native-thermal-printer';
@@ -121,7 +121,7 @@ const OrderDetailsScreen = ({navigation, route}) => {
     } else {
       dispatch(updateOrderStatus(status, order.id, printReceipt, setLoading2));
     }
-    navigationRoute.goBack();
+    // navigationRoute.goBack();
   };
   // const printRecpit = async QRCODE => {
   //   const results = await RNHTMLtoPDF.convert({
@@ -416,9 +416,11 @@ const combinedSubtotal = sub_total + dealTotal;
     tax7: Number(order?.total_netto_tax).toFixed(2),
     tax19: Number(order?.total_metto_tax).toFixed(2),
     total: Number(order?.order_total_price).toFixed(2),
+    qrCode: order?.qr_code
   };
 
   let receiptText = '';
+  receiptText += ` [C]<img>https://placehold.co/600x400/png</img>\n`;
   receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
   receiptText += '[L]\n';
   receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
@@ -540,6 +542,7 @@ if (order?.order_details?.deals?.length) {
   receiptText += '[L]\n';
   receiptText += '================================================\n\n';
   receiptText += `[C]<b><font size='tall'>Vielen Dank!</font></b>\n`;
+  receiptText += `[C]<qrcode size='20'>${QRCodeUrl}${orderData?.qrCode}</qrcode>`;
   
   try {
     const result = await ThermalPrinter.printBluetooth({
