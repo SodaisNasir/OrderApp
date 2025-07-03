@@ -2,7 +2,7 @@ import React from 'react';
 
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import RiderDashBoard from '../Screens/Rider/Dashboard';
+// import RiderDashBoard from '../Screens/Rider/RiderDashBoard';
 import AllOrdersScreen from '../Screens/Orders/InProgressOrders';
 import SettingsScreen from '../Screens/Common/Settings';
 import { scale } from 'react-native-size-matters';
@@ -10,6 +10,7 @@ import { Colors } from '../../important/Colors';
 import CurrentDeliveryScreen from '../Screens/Rider/CurrentDelivery';
 import CompletedOrdersScreen from '../Screens/Orders/CompletedOrders';
 import OrderDetailsScreen from '../Screens/Common/OrderDetails';
+import RiderDashBoard from '../Screens/Rider/RiderDashBoard';
 
 const MaterialTabs = createMaterialTopTabNavigator();
 const Stack = createStackNavigator();

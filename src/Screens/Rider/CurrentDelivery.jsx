@@ -14,7 +14,7 @@ const CurrentDeliveryScreen = ({navigation}) => {
   
   return (
     <View style={styles.container}>
-      {/* <FlatList
+      <FlatList
         style={{flex: 1, marginTop:verticalScale(10)}}
         data={newOrders}
         renderItem={({item}) => (
@@ -23,7 +23,7 @@ const CurrentDeliveryScreen = ({navigation}) => {
          onPress={()=> navigation.navigate("Order Details", {order:item, type})}
          />
         )}
-      /> */}
+      />
       <View style={styles.titleText}>
       <Text>No Current Delivery</Text>
 
