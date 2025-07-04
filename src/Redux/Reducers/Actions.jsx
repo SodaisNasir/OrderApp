@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiUrl } from '../../../important/Urls';
+import Toast from 'react-native-simple-toast';
 
 // LOGIN
 export const Login = (data,setLoader) => {
@@ -53,48 +54,60 @@ export const Login = (data,setLoader) => {
 };
 
 // GET ORDERS
-export const getOrders = (type) => {
+export const getOrders = (type,setLoader) => {
   return async (dispatch) => {
-    const myHeaders = new Headers();
-    myHeaders.append('Authorization', 'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB');
-
-    const formdata = new FormData();
-    formdata.append('status', type);
-
-    const requestOptions = {
-      method: 'POST',
-      headers: myHeaders,
-      body: formdata,
-      redirect: 'follow',
-    };
-
-    const response = await fetch(`${apiUrl}get-orders`, requestOptions);
-
-    // console.log('response', response)
-    if (response.ok) {
-      const data = await response.json();
-      // console.log('DATA in getOrders ==>', data.success.user);
-
-      let OrderAction;
-
-      if (type === 'neworder') {
-        OrderAction = {
-          type: 'NEWORDERS',
-          payload: data?.success?.user,
-        };
-      } else if (type === 'pending') {
-        OrderAction = {
-          type: 'INPROGRESSORDERS',
-          payload: data?.success?.user,
-        };
-      } else {
-        OrderAction = {
-          type: 'COMPLETEORDERS',
-          payload: data?.success?.user,
-        };
+    try {
+      if(setLoader){
+        setLoader(true)
       }
-
-      dispatch(OrderAction);
+      const myHeaders = new Headers();
+      myHeaders.append('Authorization', 'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB');
+  
+      const formdata = new FormData();
+      formdata.append('status', type);
+  
+      const requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: formdata,
+        redirect: 'follow',
+      };
+  
+      const response = await fetch(`${apiUrl}get-orders`, requestOptions);
+  
+      // console.log('response', response)
+      if (response.ok) {
+        const data = await response.json();
+        // console.log('DATA in getOrders ==>', data.success.user);
+  
+        let OrderAction;
+  
+        if (type === 'neworder') {
+          OrderAction = {
+            type: 'NEWORDERS',
+            payload: data?.success?.user,
+          };
+        } else if (type === 'pending') {
+          OrderAction = {
+            type: 'INPROGRESSORDERS',
+            payload: data?.success?.user,
+          };
+        } else {
+          OrderAction = {
+            type: 'COMPLETEORDERS',
+            payload: data?.success?.user,
+          };
+        }
+  
+        dispatch(OrderAction);
+      }
+      
+    } catch (error) {
+      console.log('error', error)
+    } finally{
+      if(setLoader){
+        setLoader(false)
+      }
     }
   };
 };
@@ -123,7 +136,10 @@ export const updateOrderStatus = (status, orderId, print, setLoading) => {
         dispatch(getOrders('delivered'));
         dispatch(getOrders('neworder'));
         dispatch(getOrders('pending'));
-        print(data.success.qr_code);
+
+        if(status != 'delivered'){
+          print(data.success.qr_code);
+        }
       } else {
         setLoading(false);
         alert('something went wrong!');
@@ -131,6 +147,63 @@ export const updateOrderStatus = (status, orderId, print, setLoading) => {
     } catch (error) {
       setLoading(false);
       console.log('ERROR ==>', error);
+    }
+  };
+};
+
+export const orderDelivrdAPI = (status, orderId, print, setLoading,navigation) => {
+  return async (dispatch) => {
+    setLoading(true);
+    try {
+      const myHeaders = new Headers();
+      myHeaders.append('Authorization', 'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB');
+
+      const formdata = new FormData();
+      // console.log('orderId', orderId)
+      // formdata.append('order_id', orderId);
+      // formdata.append('action', status);
+
+
+      formdata.append('status', status);
+
+      const requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: formdata,
+        redirect: 'follow',
+      };
+
+      // const response = await fetch(`${apiUrl}POS/update_order_status.php`, requestOptions);
+      // const response = await fetch(`https://foodola.foodola.shop/API/POS/update_order_status.php`, requestOptions);
+      const response = await fetch(`${apiUrl}change-status/${orderId}`, requestOptions);
+      if (response.ok) {
+      const userData =  await AsyncStorage.getItem('user');
+      const parseData = JSON.parse(userData)
+        // const data = await response.json();
+        dispatch(getOrders('delivered'));
+        dispatch(getOrders('neworder'));
+        dispatch(getOrders('pending'));
+
+         dispatch(getRiderOrders('shipped', parseData?.id, setLoading));
+
+         setTimeout(() => {
+           navigation.goBack()
+           Toast.show('Order has been delivered!', Toast.SHORT);
+         }, 1500);
+        // if(status != 'delivered'){
+        //   print(data.success.qr_code);
+        // }
+      } else {
+        setLoading(false);
+        alert('something went wrong!');
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log('ERROR ==>', error);
+    }finally{
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
     }
   };
 };
@@ -194,7 +267,7 @@ export const getRiderOrders = (type, id, setLoad) => {
       'Authorization',
       'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB',
     );
-
+console.log('id', id)
     var formdata = new FormData();
     formdata.append('status', type);
     formdata.append('rider_id', id);

@@ -5,7 +5,10 @@ import rootReducer from './Reducers';
 
 const store = configureStore({
   reducer: rootReducer,
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware(), // ✅ correct usage
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+    immutableCheck: false, 
+  }), // ✅ correct usage
 });
+
 
 export default store;

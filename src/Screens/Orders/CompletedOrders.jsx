@@ -1,71 +1,85 @@
-import React, {useCallback} from 'react';
-import {StyleSheet, View, FlatList, Text} from 'react-native';
-import {Colors} from '../../../important/Colors';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import {ListComponent} from '../../Components/ListComponent';
-import {useFocusEffect} from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
-import {getOrders} from '../../Redux/Reducers/Actions';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, View, FlatList, Text, SafeAreaView } from 'react-native';
+import { Colors } from '../../../important/Colors';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { ListComponent } from '../../Components/ListComponent';
+import { useFocusEffect } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import { getOrders } from '../../Redux/Reducers/Actions';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import RowSkeleton from '../../Components/Skeletons/RowSkeleton';
+import TextHeader from '../../Components/headers/TextHeader';
+import Body from '../../Components/body/Body';
 
-const CompletedOrdersScreen = ({navigation}) => {
+const CompletedOrdersScreen = ({ navigation }) => {
   const dispatch = useDispatch();
 
   const user = useSelector(state => state.auth?.userDetails);
   const completedOrders = useSelector(state => state.auth?.completedOrders);
+
+  const [loader, setLoader] = useState(false);
 
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
   useFocusEffect(
     useCallback(() => {
       navigation.getParent()?.setOptions({
-        tabBarStyle: {display: 'flex', backgroundColor: Colors.primary},
+        tabBarStyle: { display: 'flex', backgroundColor: Colors.primary },
         swipeEnabled: true,
       });
 
-      dispatch(getOrders('delivered'));
+      dispatch(getOrders('delivered', setLoader));
     }, []),
   );
-  // console.log('completedOrders', completedOrders);
   return (
-    <View style={styles.container}>
-      <FlatList
-        style={{flex: 1, marginTop: verticalScale(10)}}
-        data={completedOrders}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({item}) => (
-          <ListComponent
-            item={item}
-            onPress={() =>
-              navigation.navigate('Order Details', {order: item, type})
+    <Body>
+      <TextHeader title={'Completed Orders'} />
+      {
+        loader ?
+          <View style={{ flex: 1, }}>
+            <RowSkeleton />
+            <RowSkeleton />
+            <RowSkeleton />
+          </View>
+          :
+          <FlatList
+            style={{ flex: 1, marginTop: verticalScale(10) }}
+            data={completedOrders}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <ListComponent
+                item={item}
+                onPress={() =>
+                  navigation.navigate('Order Details', { order: item, type })
+                }
+              />
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  flex: 1,
+                  marginTop: '80%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <MaterialCommunityIcons
+                  name="file-search-outline"
+                  color={Colors.primary}
+                  size={80}
+                />
+                <Text
+                  style={{
+                    alignSelf: 'center',
+                    marginTop: 15,
+                    fontSize: 18,
+                  }}>
+                  No Completed Orders
+                </Text>
+              </View>
             }
           />
-        )}
-        ListEmptyComponent={
-          <View
-            style={{
-              flex: 1,
-              marginTop: '80%',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <MaterialCommunityIcons
-              name="file-search-outline"
-              color={Colors.primary}
-              size={80}
-            />
-            <Text
-              style={{
-                alignSelf: 'center',
-                marginTop: 15,
-                fontSize: 18,
-              }}>
-              No Complete Order
-            </Text>
-          </View>
-        }
-      />
-    </View>
+      }
+    </Body>
   );
 };
 

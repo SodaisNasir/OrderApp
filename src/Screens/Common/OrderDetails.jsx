@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,23 +12,23 @@ import {
   PermissionsAndroid,
   Platform,
 } from 'react-native';
-import {Colors} from '../../../important/Colors';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
+import { Colors } from '../../../important/Colors';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import CustomButton from '../../Components/CustomButton';
 import TimeModal from '../../Components/TimeModal';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
-import {QRCodeUrl, apiUrl, imageUrl} from '../../../important/Urls';
-import {getPDFData, updateOrderStatus} from '../../Redux/Reducers/Actions';
-import {useDispatch} from 'react-redux';
+import { QRCodeUrl, apiUrl, imageUrl } from '../../../important/Urls';
+import { getPDFData, orderDelivrdAPI, updateOrderStatus } from '../../Redux/Reducers/Actions';
+import { useDispatch } from 'react-redux';
 import ThermalPrinter from 'react-native-thermal-printer';
 import { BluetoothStateManager } from "react-native-bluetooth-state-manager";
 import { PoppinsFont } from '../../Constants/fonts';
 import Toast from 'react-native-simple-toast';
 
-const OrderDetailsScreen = ({navigation, route}) => {
+const OrderDetailsScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
   const [time, setTime] = useState(30);
@@ -39,38 +39,39 @@ const OrderDetailsScreen = ({navigation, route}) => {
   const [pdfData, setpdfData] = useState(null);
   const navigationRoute = useNavigation()
 
-  // console.log('order', JSON.stringify(order));
+  console.log('order', JSON.stringify(order));
 
   useFocusEffect(
     useCallback(() => {
       navigation
         .getParent()
-        ?.setOptions({tabBarStyle: {display: 'none'}, swipeEnabled: false});
+        ?.setOptions({ tabBarStyle: { display: 'none' }, swipeEnabled: false });
       getPDFData(setpdfData, order?.id);
-        if (Platform.OS === 'android') {
-         PermissionsAndroid.requestMultiple([
-           PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-             PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          ]);
-            }
-        const fetchDevices = async () => {
-      try {
-        const list = await ThermalPrinter.getBluetoothDeviceList();
-        console.log('Devices:', list);
-        setDevices(list);
-        if (list.length > 0) setSelectedMac(list[0].macAddress);
-      } catch (err) {
-        console.log('Error getting devices', err);
+      if (Platform.OS === 'android') {
+        PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        ]);
       }
-    };
+      const fetchDevices = async () => {
+        try {
+          const list = await ThermalPrinter.getBluetoothDeviceList();
+          console.log('Devices:', list);
+          setDevices(list);
+          if (list.length > 0) setSelectedMac(list[0].macAddress);
+        } catch (err) {
+          console.log('Error getting devices', err);
+        }
+      };
 
-    fetchDevices();
-  }, []),
-);
+      fetchDevices();
+    }, []),
+  );
 
   const dispatch = useDispatch();
-  const onConfirm = async(elmnt) => {
-    if (elmnt == 'canceled'){
+
+  const onConfirm = async (elmnt) => {
+    if (elmnt == 'canceled') {
       navigation.goBack()
       return;
     }
@@ -78,48 +79,48 @@ const OrderDetailsScreen = ({navigation, route}) => {
       order.status == 'neworder' && elmnt == 'canceled'
         ? 'canceled'
         : order.status == 'neworder'
-        ? 'pending'
-        : 'delivered';
-        try {
-          const connectedPrinter = await BluetoothStateManager.getState();
-      
-          if (connectedPrinter == 'PoweredOff') {
-            Toast.show('Bluetooth is currently disabled', Toast.SHORT);
-            await BluetoothStateManager.requestToEnable();
-            return;
-          }
+          ? 'pending'
+          : 'delivered';
+    try {
+      const connectedPrinter = await BluetoothStateManager.getState();
 
-        //   const deviceList = await ThermalPrinter.getBluetoothDeviceList();
-        // setDevices(deviceList); // optional: update state for UI
+      if (connectedPrinter == 'PoweredOff') {
+        Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+        await BluetoothStateManager.requestToEnable();
+        return;
+      }
 
-    if (!devices || devices.length === 0) {
-      Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
-      await BluetoothStateManager.openSettings();
+      //   const deviceList = await ThermalPrinter.getBluetoothDeviceList();
+      // setDevices(deviceList); // optional: update state for UI
+
+      if (!devices || devices.length === 0) {
+        Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+        await BluetoothStateManager.openSettings();
+        return;
+      }
+
+      if (devices.length > 1) {
+        Toast.show('Multiple Bluetooth devices found. Please unpair others to avoid conflict.', Toast.LONG);
+        await BluetoothStateManager.openSettings();
+        return;
+      }
+
+      const selectedPrinter = devices[0];
+
+      // Optional: You may validate the printer name prefix
+      if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
+        Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
+        return;
+      }
+
+      // Set selected MAC address and proceed with print
+      setSelectedMac(selectedPrinter.macAddress);
+
+    } catch (error) {
+      console.log('Bluetooth error:', error);
+      Toast.show('Bluetooth error. Make sure a printer is paired and connected.', Toast.LONG);
       return;
     }
-
-    if (devices.length > 1) {
-      Toast.show('Multiple Bluetooth devices found. Please unpair others to avoid conflict.', Toast.LONG);
-      await BluetoothStateManager.openSettings();
-      return;
-    }
-
-    const selectedPrinter = devices[0];
-
-    // Optional: You may validate the printer name prefix
-    if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
-      Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
-      return;
-    }
-
-    // Set selected MAC address and proceed with print
-    setSelectedMac(selectedPrinter.macAddress);
-
-  } catch (error) {
-    console.log('Bluetooth error:', error);
-    Toast.show('Bluetooth error. Make sure a printer is paired and connected.', Toast.LONG);
-    return;
-  }
     if (elmnt === 'neworder') {
       dispatch(updateOrderStatus(status, order.id, printReceipt, setLoading));
     } else {
@@ -332,239 +333,243 @@ const OrderDetailsScreen = ({navigation, route}) => {
     }
   };
 
-//   const allExtraPrice = order.order_details?.product?.reduce((total, elem) => {
-//   const addons = JSON.parse(elem.addons || '[]');
-//   const types = JSON.parse(elem.types || '[]');
-//   const dressing = JSON.parse(elem.dressing || '[]');
+  const handleRiderConfirm = (status) => {
+    dispatch(orderDelivrdAPI(status, order.id, printReceipt, setLoading2, navigation));
+  }
 
-//   const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
-//   const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
-//   const dressingTotal = dressing.reduce((sum, d) => sum + parseFloat(d.price || 0), 0);
+  //   const allExtraPrice = order.order_details?.product?.reduce((total, elem) => {
+  //   const addons = JSON.parse(elem.addons || '[]');
+  //   const types = JSON.parse(elem.types || '[]');
+  //   const dressing = JSON.parse(elem.dressing || '[]');
 
-//   return total + addonTotal + typeTotal + dressingTotal;
-// }, 0);
+  //   const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
+  //   const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+  //   const dressingTotal = dressing.reduce((sum, d) => sum + parseFloat(d.price || 0), 0);
+
+  //   return total + addonTotal + typeTotal + dressingTotal;
+  // }, 0);
 
 
   // console.log('allExtraPrice', allExtraPrice)
 
- const printReceipt = async (qr_codee) => {
-  console.log('qr_codee', qr_codee)
-  const items = order.order_details?.product?.map(product => ({
-    qty: product.qty,
-    name: product.product_details?.name || 'Unnamed',
-    price: (() => {
-  const basePrice = parseFloat(product.price);
-  const addons = JSON.parse(product.addons || '[]');
-  const types = JSON.parse(product.types || '[]');
-  const dressing = JSON.parse(product.dressing || '[]');
+  const printReceipt = async (qr_codee) => {
+    console.log('qr_codee', qr_codee)
+    const items = order.order_details?.product?.map(product => ({
+      qty: product.qty,
+      name: product.product_details?.name || 'Unnamed',
+      price: (() => {
+        const basePrice = parseFloat(product.price);
+        const addons = JSON.parse(product.addons || '[]');
+        const types = JSON.parse(product.types || '[]');
+        const dressing = JSON.parse(product.dressing || '[]');
 
-  const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
-  const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
-  const dressingTotal = dressing.reduce((sum, d) => sum + parseFloat(d.price || 0), 0);
+        const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
+        const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+        const dressingTotal = dressing.reduce((sum, d) => sum + parseFloat(d.price || 0), 0);
 
-  return basePrice + addonTotal + typeTotal + dressingTotal;
-})(),
+        return basePrice + addonTotal + typeTotal + dressingTotal;
+      })(),
 
-  }));
+    }));
 
-  const sub_total = items.reduce((acc, item) => acc + item.price * parseInt(item.qty), 0);
-  const dealTotal = order?.order_details?.deals?.reduce((sum, deal) => {
-  return sum + parseFloat(deal.deal_details?.deal_price || 0);
-}, 0);
+    const sub_total = items.reduce((acc, item) => acc + item.price * parseInt(item.qty), 0);
+    const dealTotal = order?.order_details?.deals?.reduce((sum, deal) => {
+      return sum + parseFloat(deal.deal_details?.deal_price || 0);
+    }, 0);
 
-const combinedSubtotal = sub_total + dealTotal;
+    const combinedSubtotal = sub_total + dealTotal;
 
-  const addonData = order.order_details?.product?.map((elem, index) => {
-    const basePrice = parseFloat(elem.price);
-    const qty = parseInt(elem.qty);
+    const addonData = order.order_details?.product?.map((elem, index) => {
+      const basePrice = parseFloat(elem.price);
+      const qty = parseInt(elem.qty);
 
-    const addons = JSON.parse(elem.addons || '[]');
-    const types = JSON.parse(elem.types || '[]');
-    const dressing = JSON.parse(elem.dressing || '[]');
+      const addons = JSON.parse(elem.addons || '[]');
+      const types = JSON.parse(elem.types || '[]');
+      const dressing = JSON.parse(elem.dressing || '[]');
 
 
-    return {
-      addons: addons.map(a => ({
-        title: a.ao_title,
-        name: a.as_name,
-        price: parseFloat(a.as_price),
-        quantity: a.quantity
-      })),
-      types: types.map(t => ({
-        name: t.ts_name,
-        price: parseFloat(t.price),
-      })),
-      dressing: dressing.map(d => ({
-        name: d.dressing_name,
-        price: parseFloat(d.price || 0),
-      })),
+      return {
+        addons: addons.map(a => ({
+          title: a.ao_title,
+          name: a.as_name,
+          price: parseFloat(a.as_price),
+          quantity: a.quantity
+        })),
+        types: types.map(t => ({
+          name: t.ts_name,
+          price: parseFloat(t.price),
+        })),
+        dressing: dressing.map(d => ({
+          name: d.dressing_name,
+          price: parseFloat(d.price || 0),
+        })),
+      };
+    });
+
+    const orderData = {
+      orderNo: order?.id,
+      date: order?.created_at,
+      phone: order?.userDetails?.phone,
+      email: order?.userDetails?.email,
+      name: order?.userDetails?.name,
+      shipping: order?.Shipping_address_2,
+      city: order?.Shipping_city,
+      postal: order?.Shipping_postal_code,
+      shipping_address: order?.Shipping_address,
+      shipping_area: order?.Shipping_area,
+      add_notes: order?.addtional_notes,
+      items,
+      paymentMethod: order?.payment_type,
+      subtotal: Number(combinedSubtotal).toFixed(2),
+      discount: Number(order?.total_discount).toFixed(2),
+      delivery: Number(order?.Shipping_Cost).toFixed(2),
+      tax7: Number(order?.total_netto_tax).toFixed(2),
+      tax19: Number(order?.total_metto_tax).toFixed(2),
+      total: Number(order?.order_total_price).toFixed(2),
+      qrCode: order?.qr_code
     };
-  });
 
-  const orderData = {
-    orderNo: order?.id,
-    date: order?.created_at,
-    phone: order?.userDetails?.phone,
-    email: order?.userDetails?.email,
-    name: order?.userDetails?.name,
-    shipping: order?.Shipping_address_2,
-    city: order?.Shipping_city,
-    postal: order?.Shipping_postal_code,
-    shipping_address: order?.Shipping_address,
-    shipping_area: order?.Shipping_area,
-    add_notes: order?.addtional_notes,
-    items,
-    paymentMethod: order?.payment_type,
-    subtotal: Number(combinedSubtotal).toFixed(2),
-    discount: Number(order?.total_discount).toFixed(2),
-    delivery: Number(order?.Shipping_Cost).toFixed(2),
-    tax7: Number(order?.total_netto_tax).toFixed(2),
-    tax19: Number(order?.total_metto_tax).toFixed(2),
-    total: Number(order?.order_total_price).toFixed(2),
-    qrCode: order?.qr_code
-  };
-
-  let receiptText = '';
-  receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Tel: 0725326560-61</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Bestellung Nr: ${orderData.orderNo}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Datum: ${orderData.date}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Telefon: ${orderData.phone}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Email: ${orderData.email}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Adress: ${orderData.shipping_address}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Name: ${orderData.name}\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>${orderData.shipping}-${orderData.city}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>${orderData.postal}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
-  receiptText += '[L]\n';
-  receiptText += `[C]<b>Befehl Einzelheiten*</b>\n \n`;
-  receiptText += '[L]\n';
-  receiptText += '------------------------------------------------\n';
-  receiptText += `<b><font size='tall'>Menge    Produkt                          Preis</font></b> \n`;
-  receiptText += '------------------------------------------------\n';
-  
-  orderData.items.forEach((item, idx) => {
-  receiptText += `[L]<b>x${item.qty}     ${item.name} [R]${item.price.toFixed(2)}</b>\n`;
-  receiptText += '[L]\n';
-
-  addonData[idx]?.addons?.forEach(addon => {
-    receiptText += `[L]        <b>x${addon.quantity} ${addon.name}</b>\n`;
+    let receiptText = '';
+    receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
     receiptText += '[L]\n';
-  });
-
-  addonData[idx]?.types?.forEach(type => {
-    if (type.name)
-      receiptText += `[L]        <b>${type.name}</b>\n`;
+    receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
     receiptText += '[L]\n';
-  });
-
-  addonData[idx]?.dressing?.forEach(d => {
-    if (d.name)
-      receiptText += `[L]        <b>${d.name}</b>\n`;
+    receiptText += `[C]<b>Tel: 0725326560-61</b>\n`;
     receiptText += '[L]\n';
-  });
-
-  receiptText += '------------------------------------------------\n';
-});
-
-if (order?.order_details?.deals?.length) {
-
-  order?.order_details?.deals.forEach((deal, dealIndex) => {
-    const dealInfo = deal.deal_details;
-    const dealProducts = deal.deal_product;
-
-    receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(dealInfo.deal_price).toFixed(2)}</b>\n`;
+    receiptText += `[C]<b>Bestellung Nr: ${orderData.orderNo}</b>\n`;
     receiptText += '[L]\n';
-
-    dealProducts.forEach((product, productIndex) => {
-      receiptText += `[L]<b>${product.product_name}</b>\n`;
-      receiptText += '[L]\n';
-
-      // Addons
-      if (product.addons?.length) {
-        product.addons.forEach(addon => {
-          // const price = addon.as_price === "0" || addon.isFreeInDeal === "1" ? "Free" : `${parseFloat(addon.as_price).toFixed(2)}`;
-          receiptText += `[L]        <b>x${addon.quantity} ${addon.as_name}</b>\n`;
-          receiptText += '[L]\n';
-        });
-      }
-
-      // Types
-      const types = JSON.parse(product.types || '[]');
-      if (types.length) {
-        types.forEach(t => {
-          receiptText += `[L]        <b>${t.ts_name}\n</b>`;
-          receiptText += '[L]\n';
-        });
-      }
-
-      // Dressing
-      const dressing = JSON.parse(product.dressing || '[]');
-      if (dressing.length) {
-        dressing.forEach(d => {
-          receiptText += `[L]        <b>${d.dressing_name}</b>\n`;
-          receiptText += '[L]\n';
-        });
-      }
-
-      receiptText += '[L]\n';
-    });
-
+    receiptText += `[C]<b>Datum: ${orderData.date}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Telefon: ${orderData.phone}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Email: ${orderData.email}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Adress: ${orderData.shipping_address}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Name: ${orderData.name}\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.shipping}-${orderData.city}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.postal}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Befehl Einzelheiten*</b>\n \n`;
+    receiptText += '[L]\n';
     receiptText += '------------------------------------------------\n';
-  });
-}
-  receiptText += '[L]\n';
-  receiptText += `[L]<b>Zwischensumme:</b> [R]<b>${orderData.subtotal}</b>\n\n`;
-  receiptText += '[L]\n';
-  receiptText += `[L]<b>Rabatt:</b> [R]<b>${orderData.discount}</b>\n\n`;
-  receiptText += '[L]\n';
-  receiptText += `[L]<b>Lieferung:</b> [R]<b>${orderData.delivery}</b>\n\n`;
-  receiptText += '[L]\n';
-  receiptText += `[L]<b>MwSt. (7%):</b> [R]<b>${orderData.tax7}</b>\n\n`;
-  receiptText += '[L]\n';
-  receiptText += `[L]<b>MwSt. (19%):</b> [R]<b>${orderData.tax19}</b>\n\n`;
-  receiptText += '[L]\n';
-  receiptText += '------------------------------------------------\n';
-  receiptText += '[L]\n';
-  receiptText += `[L]<b>Gesamt:</b> [R]<b>${orderData.total}</b>\n\n`;
-  
-  receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
-  receiptText += '[L]\n';
-  receiptText += '================================================\n\n';
-  receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
-  receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
-  
-  try {
-    const result = await ThermalPrinter.printBluetooth({
-      payload: receiptText,
-      macAddress: selectedMac,
-      printerWidthMM: 80,
-      printerNbrCharactersPerLine: 48,
-      autoCut: true,
+    receiptText += `<b><font size='tall'>Menge    Produkt                          Preis</font></b> \n`;
+    receiptText += '------------------------------------------------\n';
+
+    orderData.items.forEach((item, idx) => {
+      receiptText += `[L]<b>x${item.qty}     ${item.name} [R]${item.price.toFixed(2)}</b>\n`;
+      receiptText += '[L]\n';
+
+      addonData[idx]?.addons?.forEach(addon => {
+        receiptText += `[L]        <b>x${addon.quantity} ${addon.name}</b>\n`;
+        receiptText += '[L]\n';
+      });
+
+      addonData[idx]?.types?.forEach(type => {
+        if (type.name)
+          receiptText += `[L]        <b>${type.name}</b>\n`;
+        receiptText += '[L]\n';
+      });
+
+      addonData[idx]?.dressing?.forEach(d => {
+        if (d.name)
+          receiptText += `[L]        <b>${d.name}</b>\n`;
+        receiptText += '[L]\n';
+      });
+
+      receiptText += '------------------------------------------------\n';
     });
-    console.log('Printed!', result);
-    setLoading(false)
-    setLoading2(false)
-  } catch (err) {
-    setLoading(false);
-    setLoading2(false)
-    console.log('Failed to print:', err);
-  }
-};
+
+    if (order?.order_details?.deals?.length) {
+
+      order?.order_details?.deals.forEach((deal, dealIndex) => {
+        const dealInfo = deal.deal_details;
+        const dealProducts = deal.deal_product;
+
+        receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(dealInfo.deal_price).toFixed(2)}</b>\n`;
+        receiptText += '[L]\n';
+
+        dealProducts.forEach((product, productIndex) => {
+          receiptText += `[L]<b>${product.product_name}</b>\n`;
+          receiptText += '[L]\n';
+
+          // Addons
+          if (product.addons?.length) {
+            product.addons.forEach(addon => {
+              // const price = addon.as_price === "0" || addon.isFreeInDeal === "1" ? "Free" : `${parseFloat(addon.as_price).toFixed(2)}`;
+              receiptText += `[L]        <b>x${addon.quantity} ${addon.as_name}</b>\n`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          // Types
+          const types = JSON.parse(product.types || '[]');
+          if (types.length) {
+            types.forEach(t => {
+              receiptText += `[L]        <b>${t.ts_name}\n</b>`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          // Dressing
+          const dressing = JSON.parse(product.dressing || '[]');
+          if (dressing.length) {
+            dressing.forEach(d => {
+              receiptText += `[L]        <b>${d.dressing_name}</b>\n`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          receiptText += '[L]\n';
+        });
+
+        receiptText += '------------------------------------------------\n';
+      });
+    }
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Zwischensumme:</b> [R]<b>${orderData.subtotal}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Rabatt:</b> [R]<b>${orderData.discount}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Lieferung:</b> [R]<b>${orderData.delivery}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>MwSt. (7%):</b> [R]<b>${orderData.tax7}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>MwSt. (19%):</b> [R]<b>${orderData.tax19}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += '------------------------------------------------\n';
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Gesamt:</b> [R]<b>${orderData.total}</b>\n\n`;
+
+    receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += '================================================\n\n';
+    receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
+    receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
+
+    try {
+      const result = await ThermalPrinter.printBluetooth({
+        payload: receiptText,
+        macAddress: selectedMac,
+        printerWidthMM: 80,
+        printerNbrCharactersPerLine: 48,
+        autoCut: true,
+      });
+      console.log('Printed!', result);
+      setLoading(false)
+      setLoading2(false)
+    } catch (err) {
+      setLoading(false);
+      setLoading2(false)
+      console.log('Failed to print:', err);
+    }
+  };
   return (
     <>
       <View
@@ -573,8 +578,8 @@ if (order?.order_details?.deals?.length) {
             order.status == 'neworder'
               ? Colors.textLighestGrey
               : order.status == 'pending'
-              ? Colors.primaryOrg
-              : Colors.lightprimary,
+                ? Colors.primaryOrg
+                : Colors.lightprimary,
           paddingHorizontal: scale(15),
           paddingVertical: scale(20),
         }}>
@@ -590,38 +595,38 @@ if (order?.order_details?.deals?.length) {
               order.status == 'neworder'
                 ? Colors.textLighestGrey
                 : order.status == 'pending'
-                ? Colors.primaryOrg
-                : Colors.lightprimary,
+                  ? Colors.primaryOrg
+                  : Colors.lightprimary,
           },
         ]}>
         <View style={styles.card}>
-          <ScrollView style={{flex: 1, paddingHorizontal: moderateScale(15)}}>
+          <ScrollView style={{ flex: 1, paddingHorizontal: moderateScale(15) }}>
             {order?.order_details?.product?.length ? (
               <>
-                <Text style={{fontSize: scale(15), fontWeight: '700'}}>
+                <Text style={{ fontSize: scale(15), fontWeight: '700' }}>
                   Order Details
                 </Text>
                 <FlatList
-                  style={{height: '100%'}}
+                  style={{ height: '100%' }}
                   showsVerticalScrollIndicator={true}
                   data={order.order_details?.product}
-                  contentContainerStyle={{paddingHorizontal: 1}}
-                  renderItem={({item}) => {
+                  contentContainerStyle={{ paddingHorizontal: 1 }}
+                  renderItem={({ item }) => {
                     const vvv = order.order_total_price - item.price;
                     const discountAmount = (vvv * item.discount_percent) / 100;
                     const newDiscountedPrice = item.price + discountAmount;
 
-                      // Parse extras
-                        const addons = JSON.parse(item.addons || '[]');
-                        const types = JSON.parse(item.types || '[]');
-                        const dressings = JSON.parse(item.dressing || '[]');
-                        // Calculate totals
-                        const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
-                        const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
-                        const dressingTotal = dressings.reduce((sum, d) => sum + parseFloat(d.price || 0), 0);
-                        // Final total including extras
-                        const basePrice = parseFloat(item.price || 0);
-                        const totalPrice = basePrice + addonTotal + typeTotal + dressingTotal;
+                    // Parse extras
+                    const addons = JSON.parse(item.addons || '[]');
+                    const types = JSON.parse(item.types || '[]');
+                    const dressings = JSON.parse(item.dressing || '[]');
+                    // Calculate totals
+                    const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
+                    const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+                    const dressingTotal = dressings.reduce((sum, d) => sum + parseFloat(d.price || 0), 0);
+                    // Final total including extras
+                    const basePrice = parseFloat(item.price || 0);
+                    const totalPrice = basePrice + addonTotal + typeTotal + dressingTotal;
 
 
                     // console.log('item  ===v ', newDiscountedPrice);
@@ -644,7 +649,7 @@ if (order?.order_details?.deals?.length) {
                           shadowOpacity: 1,
                           elevation: 2,
                         }}>
-                        <View style={{flexDirection: 'row'}}>
+                        <View style={{ flexDirection: 'row' }}>
                           <View
                             style={{
                               height: scale(50),
@@ -654,13 +659,13 @@ if (order?.order_details?.deals?.length) {
                               // backgroundColor: 'red',
                             }}>
                             <Image
-                              style={{height: '100%', width: '100%'}}
+                              style={{ height: '100%', width: '100%' }}
                               source={{
                                 uri: `${imageUrl}${item.product_details.img}`,
                               }}
                             />
                           </View>
-                          <View style={{marginLeft: scale(5), width: '60%'}}>
+                          <View style={{ marginLeft: scale(5), width: '60%' }}>
                             <Text
                               numberOfLines={2}
                               style={{
@@ -709,8 +714,8 @@ if (order?.order_details?.deals?.length) {
                                             color: Colors.iconBackground,
                                             fontSize: scale(8),
                                           }}>{`€${Number(item.as_price).toFixed(
-                                          2,
-                                        )}`}</Text>
+                                            2,
+                                          )}`}</Text>
                                       </View>
                                     ))}
                                   </ScrollView>
@@ -718,7 +723,7 @@ if (order?.order_details?.deals?.length) {
                               )}
                           </View>
                         </View>
-                        <View style={{marginLeft: -8}}>
+                        <View style={{ marginLeft: -8 }}>
                           <Text
                             style={{
                               fontSize: scale(9),
@@ -729,8 +734,8 @@ if (order?.order_details?.deals?.length) {
                               fontSize: scale(9),
                               color: Colors.iconBackground,
                             }}>{`Price :€${Number(totalPrice).toFixed(
-                            2,
-                          )}`}</Text>
+                              2,
+                            )}`}</Text>
                         </View>
                       </View>
                     );
@@ -741,7 +746,7 @@ if (order?.order_details?.deals?.length) {
 
             {order?.order_details?.deals?.length ? (
               <>
-                <Text style={{fontSize: scale(15), fontWeight: '700'}}>
+                <Text style={{ fontSize: scale(15), fontWeight: '700' }}>
                   Deals Details
                 </Text>
                 <View
@@ -762,7 +767,7 @@ if (order?.order_details?.deals?.length) {
                     shadowOpacity: 1,
                     elevation: 2,
                   }}>
-                  <View style={{flexDirection: 'row'}}>
+                  <View style={{ flexDirection: 'row' }}>
                     <View
                       style={{
                         height: scale(50),
@@ -773,13 +778,13 @@ if (order?.order_details?.deals?.length) {
                         alignItems: 'center',
                       }}>
                       <Image
-                        style={{height: '100%', width: '100%'}}
+                        style={{ height: '100%', width: '100%' }}
                         source={{
                           uri: `${imageUrl}${order?.order_details?.deals[0]?.deal_details?.deal_image}`,
                         }}
                       />
                     </View>
-                    <View style={{marginLeft: scale(5), width: '60%'}}>
+                    <View style={{ marginLeft: scale(5), width: '60%' }}>
                       <Text
                         numberOfLines={2}
                         style={{
@@ -798,142 +803,142 @@ if (order?.order_details?.deals?.length) {
                         }
                       </Text>
                     </View>
-                    <View style={{marginLeft: -8}}>
-                          {/* <Text
+                    <View style={{ marginLeft: -8 }}>
+                      {/* <Text
                             style={{
                               fontSize: scale(9),
                               color: Colors.iconBackground,
                             }}>{`Qty : ${order.order_details?.deals[0]?.deal_details?.deal_price}`}</Text> */}
-                          <Text
+                      <Text
+                        style={{
+                          fontSize: scale(9),
+                          color: Colors.iconBackground,
+                        }}>{`Price :€${order.order_details?.deals[0]?.deal_details?.deal_price}`}</Text>
+                    </View>
+                  </View>
+
+                  <FlatList
+                    data={order.order_details?.deals[0]?.deal_product}
+                    // style={{height: '100%'}}
+                    renderItem={({ item }) => {
+                      return (
+                        <>
+                          <View
                             style={{
-                              fontSize: scale(9),
-                              color: Colors.iconBackground,
-                            }}>{`Price :€${order.order_details?.deals[0]?.deal_details?.deal_price}`}</Text>
-                        </View>
-                  </View>                
-
-                <FlatList
-                  data={order.order_details?.deals[0]?.deal_product}
-                  // style={{height: '100%'}}
-                  renderItem={({item}) => {
-                    return (
-                      <>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginVertical: scale(5),
-                            borderRadius: scale(10),
-                            padding: scale(10),
-                            marginHorizontal: scale(5),
-                            shadowOffset: {
-                              height: scale(1),
-                              width: scale(1),
-                            },
-                            backgroundColor: Colors.backgroundColor,
-                            shadowColor: Colors.iconBackground,
-                            shadowOpacity: 1,
-                          }}>
-                          <View style={{flexDirection: 'row'}}>
-                            <View
-                              style={{
-                                height: scale(30),
-                                width: scale(30),
-                                borderRadius: 10,
-                                overflow: 'hidden',
-                                // backgroundColor: 'red',
-                              }}>
-                              <Image
-                                style={{height: '100%', width: '100%'}}
-                                source={{
-                                  uri: `${imageUrl}${item.product_details.img}`,
-                                }}
-                              />
-                            </View>
-                            <View style={{marginLeft: scale(5), width: '60%'}}>
-                              <Text
-                                numberOfLines={2}
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginVertical: scale(5),
+                              borderRadius: scale(10),
+                              padding: scale(10),
+                              marginHorizontal: scale(5),
+                              shadowOffset: {
+                                height: scale(1),
+                                width: scale(1),
+                              },
+                              backgroundColor: Colors.backgroundColor,
+                              shadowColor: Colors.iconBackground,
+                              shadowOpacity: 1,
+                            }}>
+                            <View style={{ flexDirection: 'row' }}>
+                              <View
                                 style={{
-                                  fontSize: scale(10),
+                                  height: scale(30),
+                                  width: scale(30),
+                                  borderRadius: 10,
+                                  overflow: 'hidden',
+                                  // backgroundColor: 'red',
                                 }}>
-                                {item.product_details.name}
-                              </Text>
+                                <Image
+                                  style={{ height: '100%', width: '100%' }}
+                                  source={{
+                                    uri: `${imageUrl}${item.product_details.img}`,
+                                  }}
+                                />
+                              </View>
+                              <View style={{ marginLeft: scale(5), width: '60%' }}>
+                                <Text
+                                  numberOfLines={2}
+                                  style={{
+                                    fontSize: scale(10),
+                                  }}>
+                                  {item.product_details.name}
+                                </Text>
 
-                              {item.addons &&
-                                item.addons.length > 0 && (
-                                  <>
-                                    <Text
-                                      style={{
-                                        fontSize: scale(9),
-                                        fontWeight: 'bold',
-                                      }}>
-                                      AddOns
-                                    </Text>
-                                    <ScrollView
-                                      style={{
-                                        marginLeft: scale(5),
-                                        // height: scale(10),
-                                        width: scale(80),
-                                      }}>
-                                      {item.addons.map(item => (
-                                        <View
-                                          style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                          }}>
-                                          <Text
+                                {item.addons &&
+                                  item.addons.length > 0 && (
+                                    <>
+                                      <Text
+                                        style={{
+                                          fontSize: scale(9),
+                                          fontWeight: 'bold',
+                                        }}>
+                                        AddOns
+                                      </Text>
+                                      <ScrollView
+                                        style={{
+                                          marginLeft: scale(5),
+                                          // height: scale(10),
+                                          width: scale(80),
+                                        }}>
+                                        {item.addons.map(item => (
+                                          <View
                                             style={{
-                                              color: Colors.iconBackground,
-
-                                              fontSize: scale(8),
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              justifyContent: 'space-between',
                                             }}>
-                                            {item.as_name}
-                                          </Text>
-                                          <Text
-                                            style={{
-                                              color: Colors.iconBackground,
-                                              fontSize: scale(8),
-                                            }}>{`x${item.quantity}`}</Text>
-                                          <Text
-                                            style={{
-                                              color: Colors.iconBackground,
-                                              fontSize: scale(8),
-                                            }}>{`€${Number(
-                                            item.as_price,
-                                          ).toFixed(2)}`}</Text>
-                                        </View>
-                                      ))}
-                                    </ScrollView>
-                                  </>
-                                )}
+                                            <Text
+                                              style={{
+                                                color: Colors.iconBackground,
+
+                                                fontSize: scale(8),
+                                              }}>
+                                              {item.as_name}
+                                            </Text>
+                                            <Text
+                                              style={{
+                                                color: Colors.iconBackground,
+                                                fontSize: scale(8),
+                                              }}>{`x${item.quantity}`}</Text>
+                                            <Text
+                                              style={{
+                                                color: Colors.iconBackground,
+                                                fontSize: scale(8),
+                                              }}>{`€${Number(
+                                                item.as_price,
+                                              ).toFixed(2)}`}</Text>
+                                          </View>
+                                        ))}
+                                      </ScrollView>
+                                    </>
+                                  )}
+                              </View>
                             </View>
-                          </View>
-                          <View>
-                            <Text
-                              style={{
-                                fontSize: scale(9),
-                                color: Colors.iconBackground,
-                              }}>{`Qty : ${item.qty || 1}`}</Text>
-                            {/* <Text
+                            <View>
+                              <Text
+                                style={{
+                                  fontSize: scale(9),
+                                  color: Colors.iconBackground,
+                                }}>{`Qty : ${item.qty || 1}`}</Text>
+                              {/* <Text
                               style={{
                                 fontSize: scale(9),
                                 color: Colors.iconBackground,
                               }}>{`Price :€${Number(item.price).toFixed(
                               2,
                             )}`}</Text> */}
+                            </View>
                           </View>
-                        </View>
-                      </>
-                    );
-                  }}
-                />
+                        </>
+                      );
+                    }}
+                  />
                 </View>
               </>
             ) : null}
 
-            <View style={{marginBottom: scale(30)}}>
+            <View style={{ marginBottom: scale(30) }}>
               {/* <View style={styles.data_info}>
                 <Text>Discount :</Text>
               <Text style={{color: Colors.black, fontFamily: PoppinsFont.Poppins600}}>
@@ -968,14 +973,14 @@ if (order?.order_details?.deals?.length) {
                   {order.status.toUpperCase()}
                 </Text>
               </View> */}
-              <Text style={{alignSelf: 'center'}}>
+              <Text style={{ alignSelf: 'center' }}>
                 {`MwSt(7%) :€${order?.total_netto_tax.toFixed(2)}`}
               </Text>
-              <Text style={{alignSelf: 'center'}}>
+              <Text style={{ alignSelf: 'center' }}>
                 {`Total Amount :€${order.order_total_price}`}{' '}
               </Text>
 
-              <Text style={{alignSelf: 'center'}}>
+              <Text style={{ alignSelf: 'center' }}>
                 Status :
                 <Text
                   style={{
@@ -984,8 +989,8 @@ if (order?.order_details?.deals?.length) {
                       order.status == 'neworder'
                         ? Colors.textBlue
                         : order.status == 'delivered'
-                        ? Colors.lightprimary
-                        : Colors.primary,
+                          ? Colors.lightprimary
+                          : Colors.primary,
                   }}>
                   {' '}
                   {order.status.toUpperCase()}
@@ -1004,6 +1009,30 @@ if (order?.order_details?.deals?.length) {
                 />
                 <Text>{order.Shipping_postal_code}</Text>
               </View>
+
+            {order?.order_type != 'pickup' &&  <View style={styles.addressCon}>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.titlee}>Street:  </Text>
+                  <Text style={styles.anss}>{order?.Shipping_address_2}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.titlee}>House no:  </Text>
+                  <Text style={styles.anss}>{order?.Shipping_city}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.titlee}>Door Bell Name:  </Text>
+                  <Text style={styles.anss}>{order?.Shipping_area}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.titlee}>Additional info:  </Text>
+                  <Text style={styles.anss}>{order?.Shipping_state}</Text>
+                </View>
+
+              </View>}
+
+
+
             </View>
           </ScrollView>
           {accountType == 'kitchen' && order.status != 'delivered' && (
@@ -1015,20 +1044,20 @@ if (order?.order_details?.deals?.length) {
                 justifyContent: 'center',
                 borderRadius: scale(10),
               }}>
-              <View style={{marginVertical: scale(20)}}>
-                <Text style={{color: Colors.grey}}>Time To Deliver / Prepare (Minutes)</Text>
+              <View style={{ marginVertical: scale(20) }}>
+                <Text style={{ color: Colors.grey }}>Time To Deliver / Prepare (Minutes)</Text>
               </View>
-              <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <TouchableOpacity style={{
                   borderWidth: scale(1),
-                    height: scale(40),
-                    width: scale(40),
-                    borderRadius: 10,
-                    borderColor: '#D1D5DB',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                  height: scale(40),
+                  width: scale(40),
+                  borderRadius: 10,
+                  borderColor: '#D1D5DB',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }} onPress={decrement}>
-                  <Text style={{fontSize: scale(25)}}>-</Text>
+                  <Text style={{ fontSize: scale(25) }}>-</Text>
                 </TouchableOpacity>
                 <View
                   style={{
@@ -1044,14 +1073,14 @@ if (order?.order_details?.deals?.length) {
                 </View>
                 <TouchableOpacity style={{
                   borderWidth: scale(1),
-                    height: scale(40),
-                    width: scale(40),
-                    borderRadius: 10,
-                    borderColor: '#D1D5DB',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                  height: scale(40),
+                  width: scale(40),
+                  borderRadius: 10,
+                  borderColor: '#D1D5DB',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }} onPress={incrtement}>
-                  <Text style={{fontSize: scale(20)}}>+</Text>
+                  <Text style={{ fontSize: scale(20) }}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1068,7 +1097,7 @@ if (order?.order_details?.deals?.length) {
                 borderBottomLeftRadius: scale(10),
                 borderBottomRightRadius: scale(10),
               }}>
-              <View style={{flexDirection: 'row', height: '100%', gap: 10}}>
+              <View style={{ flexDirection: 'row', height: '100%', gap: 10 }}>
                 <TouchableOpacity
                   onPress={!loading ? () => onConfirm('neworder') : () => null}
                   style={[
@@ -1083,7 +1112,7 @@ if (order?.order_details?.deals?.length) {
                     },
                   ]}>
                   {!loading ? (
-                    <Text style={{color: Colors.textColor}}>Confirm</Text>
+                    <Text style={{ color: Colors.textColor }}>Confirm</Text>
                   ) : (
                     <ActivityIndicator
                       size={'large'}
@@ -1106,7 +1135,7 @@ if (order?.order_details?.deals?.length) {
                     },
                   ]}>
                   {!loading2 ? (
-                    <Text style={{color: Colors.textColor}}>Cancel</Text>
+                    <Text style={{ color: Colors.textColor }}>Cancel</Text>
                   ) : (
                     <ActivityIndicator
                       size={'large'}
@@ -1116,7 +1145,37 @@ if (order?.order_details?.deals?.length) {
                 </TouchableOpacity>
               </View>
             </View>
-          ) : null}
+          ) :
+            null
+          }
+          {order?.status == 'shipped' && <TouchableOpacity
+            disabled={loading2}
+            onPress={() => handleRiderConfirm('delivered')}
+            style={[
+              {
+                justifyContent: 'center',
+                borderRadius: 10,
+                // borderBottomLeftRadius: scale(10),
+                backgroundColor: '#22C55E',
+                alignSelf: 'center',
+                width: '90%',
+                marginTop: scale(20),
+                marginBottom: 10,
+                alignItems: 'center',
+                height: '7%',
+                borderBottomLeftRadius: scale(10),
+                borderBottomRightRadius: scale(10),
+              },
+            ]}>
+            {!loading2 ? (
+              <Text style={{ color: Colors.textColor }}>Confirm</Text>
+            ) : (
+              <ActivityIndicator
+                size={'small'}
+                color={Colors.white}
+              />
+            )}
+          </TouchableOpacity>}
         </View>
       </View>
     </>
@@ -1133,7 +1192,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: moderateScale(20),
   },
-  inputStyles: {marginVertical: scale(20)},
+  inputStyles: { marginVertical: scale(20) },
   card: {
     flex: 0.9,
     marginHorizontal: scale(20),
@@ -1158,9 +1217,24 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: scale(10),
     borderBottomRightRadius: scale(10),
   },
-  data_info:{
+  data_info: {
     flexDirection: 'row',
     justifyContent: 'space-between'
+  },
+  titlee: {
+    fontFamily: PoppinsFont.Poppins500,
+    color: 'black',
+    fontSize: 12,
+  },
+  anss: {
+    fontFamily: PoppinsFont.Poppins400,
+    color: Colors.grey,
+    fontSize: 12,
+  },
+  addressCon: {
+    justifyContent: 'center',
+    alignItems: "center",
+    marginVertical: 15
   }
 });
 export default OrderDetailsScreen;

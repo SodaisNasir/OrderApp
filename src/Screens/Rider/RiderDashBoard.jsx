@@ -6,6 +6,8 @@ import {moderateScale, scale} from 'react-native-size-matters';
 import {useDispatch, useSelector} from 'react-redux';
 import {apiUrl} from '../../../important/Urls';
 import {useFocusEffect} from '@react-navigation/native';
+import Body from '../../Components/body/Body';
+import TextHeader from '../../Components/headers/TextHeader';
 
 const RiderDashBoard = ({navigation}) => {
   const dispatch = useDispatch();
@@ -80,7 +82,7 @@ const RiderDashBoard = ({navigation}) => {
         const responseData = await response.json();
         if (responseData.error) {
           alert('Order has alreay been Shipped!');
-          navigation.navigate('Current Delivery');
+          // navigation.navigate('Current Delivery');
         } else {
           navigation.navigate('Current Delivery');
         }
@@ -94,7 +96,9 @@ const RiderDashBoard = ({navigation}) => {
     }
   };
   return (
-    <View style={styles.container}>
+    <Body>
+      <TextHeader title={'Scanner'} />
+      <View style={styles.container}>
       <View style={styles.scannerBox}>
         {scanEnabled && (
           <Camera
@@ -108,13 +112,14 @@ const RiderDashBoard = ({navigation}) => {
           />
         )}
       </View>
-    </View>
+      </View>
+    </Body>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 0.9,
     backgroundColor: Colors.backgroundColor,
     justifyContent: 'center',
     alignItems: 'center',

@@ -38,9 +38,14 @@ const LogoutModal = ({modalVisible, setModalVisible}) => {
     <Modal
       animationType="slide"
       transparent={true}
+      statusBarTranslucent
       visible={modalVisible}
+      style={{
+        flex: 1,
+        margin:0
+      }}
     >
-      <StatusBar backgroundColor={'rgba(0, 0, 0, 0.5)'} />
+      {/* <StatusBar backgroundColor={'rgba(0, 0, 0, 0.5)'} /> */}
       <View style={styles.modalOverlay}>
         <View style={styles.modalView}>
               <NewButton

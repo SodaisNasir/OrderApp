@@ -1,12 +1,12 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-// import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
+import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 
 
 const RowSkeleton = ({ onPress }) => {
   return (
     <TouchableOpacity onPress={onPress}>
-      {/* <SkeletonPlaceholder
+      <SkeletonPlaceholder
         speed={1350}
         borderRadius={12}
         highlightColor={"#DFC700"}
@@ -18,7 +18,7 @@ const RowSkeleton = ({ onPress }) => {
             marginLeft='4%'
           />
         </SkeletonPlaceholder.Item>
-      </SkeletonPlaceholder> */}
+      </SkeletonPlaceholder>
     </TouchableOpacity>
   );
 };

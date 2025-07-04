@@ -6,6 +6,7 @@ import {imageUrl} from '../../important/Urls';
 import DefaultImg from '../assets/tab/deal.jpg';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
+import { PoppinsFont } from '../Constants/fonts';
 
 export const ListComponent = ({item, onPress}) => {
   const productImg = item?.order_details?.product?.[0]?.product_details?.img;
@@ -17,8 +18,11 @@ export const ListComponent = ({item, onPress}) => {
 
   const image_Url = productImg || dealImg;
   const pro_names = productName || dealName;
+
+
+  // console.log('item?.payment_status', item?.payment_status)
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} style={styles.mainCon} activeOpacity={0.6}>
       <LinearGradient
         colors={
           // item.status == 'neworder'
@@ -81,9 +85,12 @@ export const ListComponent = ({item, onPress}) => {
             <Text
               style={{
                 color: Colors.black,
-                fontSize: scale(12),
-                fontFamily: 'OpenSans-Bold',
-              }}>
+                fontSize: 14,
+                fontFamily: PoppinsFont.Poppins600,
+                // width: '85%'
+              }}
+              numberOfLines={1}
+              >
               {pro_names}
             </Text>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
@@ -135,18 +142,26 @@ export const ListComponent = ({item, onPress}) => {
 };
 
 const styles = StyleSheet.create({
+  mainCon:{
+    backgroundColor: 'white',
+    overflow: 'hidden',
+    elevation: 2.5,
+    marginVertical: scale(8),
+    marginHorizontal: scale(20),
+    borderRadius: 10,
+  },
   list: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical: scale(8),
-    marginHorizontal: scale(20),
-    borderRadius: scale(5),
+    // marginVertical: scale(8),
+    // marginHorizontal: scale(20),
+    // borderRadius: scale(5),
     // paddingHorizontal: scale(10),
     // paddingVertical: scale(15),
     position: 'relative',
     overflow: 'hidden',
-    elevation: 2.5,
+    // elevation: 2.5,
   },
   payment_box: {
     position: 'absolute',
