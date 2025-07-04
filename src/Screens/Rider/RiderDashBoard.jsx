@@ -1,34 +1,64 @@
-import React, {useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useCallback, useState} from 'react';
+import {StyleSheet, View, PermissionsAndroid, Platform} from 'react-native';
 import {Camera} from 'react-native-camera-kit';
 import {Colors} from '../../../important/Colors';
 import {moderateScale, scale} from 'react-native-size-matters';
 import {useDispatch, useSelector} from 'react-redux';
 import {apiUrl} from '../../../important/Urls';
+import {useFocusEffect} from '@react-navigation/native';
 
-const RiderDashBoard  = ({navigation}) => {
+const RiderDashBoard = ({navigation}) => {
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.auth?.userDetails);
-  const [scanEnabled, setScanEnabled] = useState(true);
-  const [data, setData] = useState(0);
+  const user = useSelector(state => state.auth?.userDetails);
+  const [scanEnabled, setScanEnabled] = useState(false);
+  const [data, setData] = useState(false);
+
+  const requestCameraPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'App needs camera access to scan QR codes.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    return true;
+  };
+
+  
+  useFocusEffect(
+    useCallback(() => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: {display: 'flex', backgroundColor: Colors.primary},
+        swipeEnabled: true,
+      });
+      setData(true);
+      setScanEnabled(true);
+      const enableCamera = async () => {
+        const hasPermission = await requestCameraPermission();
+        if (hasPermission) {
+          setData(true);
+          setScanEnabled(true);
+        } else {
+          alert('Camera permission denied');
+        }
+      };
+      enableCamera();
+    }, []),
+  );
+
 
   const navigateNext = async event => {
-    if (scanEnabled && data === 0) {
+    if (scanEnabled) {
+      setData(false);
       setScanEnabled(false);
       try {
-        // console.log(
-        //   '===================================================================',
-        // );
-        // console.log(
-        //   'event.nativeEvent.codeStringValue ==>',
-        //   event.nativeEvent.codeStringValue,
-        // );
-        // console.log(
-        //   '===================================================================',
-        // );
-        // console.log('v',   `${apiUrl}store-rider-order/${user.id}/${event.nativeEvent.codeStringValue}`);
         var myHeaders = new Headers();
-
         myHeaders.append(
           'Authorization',
           'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB',
@@ -39,49 +69,44 @@ const RiderDashBoard  = ({navigation}) => {
           headers: myHeaders,
           redirect: 'follow',
         };
-        // console.log(`${apiUrl}store-rider-order/${user.id}/${event.nativeEvent.codeStringValue}`);
-        
+        console.log(
+          `${apiUrl}store-rider-order/${user.id}/${event.nativeEvent.codeStringValue}`,
+        );
+
         const response = await fetch(
           `${apiUrl}store-rider-order/${user.id}/${event.nativeEvent.codeStringValue}`,
           requestOptions,
         );
         const responseData = await response.json();
-        // console.log('responseData', responseData)
         if (responseData.error) {
           alert('Order has alreay been Shipped!');
+          navigation.navigate('Current Delivery');
         } else {
-          const CurrentDeliveryAction  = {
-            type: 'CURRENTDELIVERY',
-            payload: responseData.success.order,
-          };
-          dispatch(CurrentDeliveryAction);
-          setData(parseInt(event?.nativeEvent?.codeStringValue));
+          navigation.navigate('Current Delivery');
         }
       } catch (error) {
-        console.log('v error', error)
-        // console.log('error', JSON.stringify(error,null,2))
         alert(error);
       } finally {
         setScanEnabled(true);
       }
     } else {
-      console.log('laraaaib ===>');
+      console.log('No More Scan');
     }
   };
   return (
     <View style={styles.container}>
       <View style={styles.scannerBox}>
-        <Camera
-          scanBarcode={scanEnabled}
-          allowCaptureRetake={false}
-          onReadCode={event => {
-            if (scanEnabled) navigateNext(event);
-          }}
-          showFrame={true}
-          frameColor={Colors.primaryOrg}
-          laserColor="#2FB071"
-          style={styles.camera}
-        />
+        {scanEnabled && (
+          <Camera
+            scanBarcode={true}
+            allowCaptureRetake={false}
+            onReadCode={navigateNext}
+            showFrame={true}
+            frameColor={Colors.primaryOrg}
+            laserColor="#2FB071"
+            style={styles.camera}
+          />
+        )}
       </View>
     </View>
   );

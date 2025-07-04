@@ -185,3 +185,44 @@ export const getPDFData = async (setData, id) => {
     console.log('getPDFData error', error);
   }
 };
+
+export const getRiderOrders = (type, id, setLoad) => {
+  return async (dispatch) => {
+    setLoad(true);
+    var myHeaders = new Headers();
+    myHeaders.append(
+      'Authorization',
+      'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB',
+    );
+
+    var formdata = new FormData();
+    formdata.append('status', type);
+    formdata.append('rider_id', id);
+
+    var requestOptions = {
+      method: 'POST',
+      headers: myHeaders,
+      body: formdata,
+      redirect: 'follow',
+    };
+    const response = await fetch(`${apiUrl}rider-order`, requestOptions);
+    setLoad(false);
+    if (response.ok) {
+      const data = await response.json();
+      // console.log('response ??????????????', JSON.stringify(data))
+      const OrderAction = {
+        type: 'RIDERORDERS',
+        payload: data?.success?.user,
+      };
+      dispatch(OrderAction);
+     
+    } else {
+      const data = await response.json();
+      const OrderAction = {
+        type: 'RIDERORDERS',
+        payload: [],
+      };
+      dispatch(OrderAction);
+    }
+  };
+};

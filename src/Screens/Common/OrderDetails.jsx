@@ -70,6 +70,10 @@ const OrderDetailsScreen = ({navigation, route}) => {
 
   const dispatch = useDispatch();
   const onConfirm = async(elmnt) => {
+    if (elmnt == 'canceled'){
+      navigation.goBack()
+      return;
+    }
     const status =
       order.status == 'neworder' && elmnt == 'canceled'
         ? 'canceled'
@@ -121,7 +125,7 @@ const OrderDetailsScreen = ({navigation, route}) => {
     } else {
       dispatch(updateOrderStatus(status, order.id, printReceipt, setLoading2));
     }
-    // navigationRoute.goBack();
+    navigationRoute.goBack();
   };
   // const printRecpit = async QRCODE => {
   //   const results = await RNHTMLtoPDF.convert({
@@ -343,7 +347,8 @@ const OrderDetailsScreen = ({navigation, route}) => {
 
   // console.log('allExtraPrice', allExtraPrice)
 
- const printReceipt = async () => {
+ const printReceipt = async (qr_codee) => {
+  console.log('qr_codee', qr_codee)
   const items = order.order_details?.product?.map(product => ({
     qty: product.qty,
     name: product.product_details?.name || 'Unnamed',
@@ -420,7 +425,6 @@ const combinedSubtotal = sub_total + dealTotal;
   };
 
   let receiptText = '';
-  receiptText += ` [C]<img>https://placehold.co/600x400/png</img>\n`;
   receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
   receiptText += '[L]\n';
   receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
@@ -541,8 +545,8 @@ if (order?.order_details?.deals?.length) {
   receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
   receiptText += '[L]\n';
   receiptText += '================================================\n\n';
-  receiptText += `[C]<b><font size='tall'>Vielen Dank!</font></b>\n`;
-  receiptText += `[C]<qrcode size='20'>${QRCodeUrl}${orderData?.qrCode}</qrcode>`;
+  receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
+  receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
   
   try {
     const result = await ThermalPrinter.printBluetooth({

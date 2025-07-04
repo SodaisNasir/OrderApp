@@ -26,6 +26,11 @@ const authReducer = (state = initialState, action) => {
         ...state,
         currentDelivery: action.payload,
       };
+       case 'RIDERORDERS':
+      return {
+        ...state,
+        RiderOrders: action.payload,
+      };
     default:
       return state;
   }
