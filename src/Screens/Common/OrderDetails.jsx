@@ -111,32 +111,38 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       //   await BluetoothStateManager.openSettings();
       //   return;
       // }
+      const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
 
+      if (!connectedPrinter) {
+        Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+        await RNBluetoothClassic.requestBluetoothEnabled();
+        return false;
+      }
 
       const bondedDevices = await RNBluetoothClassic.getBondedDevices();
 
-      if (!bondedDevices || bondedDevices.length === 0) {
+      if (!bondedDevices || bondedDevices?.length === 0) {
         Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
     
         if (Platform.OS === 'android') {
-          Linking.openSettings();
+         RNBluetoothClassic.openBluetoothSettings()
         } else {
-          Linking.openURL('App-Prefs:root=Bluetooth');
+           RNBluetoothClassic.openBluetoothSettings()
         }
     
         return false;
       }
     
-      if (bondedDevices.length > 1) {
+      if (bondedDevices?.length > 1) {
         Toast.show(
           'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
           Toast.LONG
         );
     
         if (Platform.OS === 'android') {
-          Linking.openSettings();
+         RNBluetoothClassic.openBluetoothSettings()
         } else {
-          Linking.openURL('App-Prefs:root=Bluetooth');
+           RNBluetoothClassic.openBluetoothSettings()
         }
     
         return false;

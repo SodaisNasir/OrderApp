@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, RefreshControl, Dimensions, Linking, Platform, PermissionsAndroid } from 'react-native';
 import { Colors } from '../../../important/Colors';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { allOrders, newOrders } from '../../Constants/DummyData';
@@ -13,6 +13,9 @@ import { PoppinsFont } from '../../Constants/fonts';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Body from '../../Components/body/Body';
 import TextHeader from '../../Components/headers/TextHeader';
+import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import CustomButton from '../../Components/CustomButton';
+import Toast from 'react-native-simple-toast';
 
 const h = Dimensions.get('screen').height
 const w = Dimensions.get('screen').width
@@ -40,6 +43,21 @@ const CurrentDeliveryScreen = ({ navigation }) => {
     dispatch(getRiderOrders('shipped', user?.id, setLoad));
   }, [])
 
+  async function requestBluetoothPermissions() {
+    if (Platform.OS === 'android' && Platform.Version >= 31) {
+      const granted = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      ]);
+  
+      const allGranted = Object.values(granted).every((p) => p === PermissionsAndroid.RESULTS.GRANTED);
+      return allGranted;
+    }
+  
+    return true;
+  }
+
   const onRefresh = async () => {
     setRefreshing(true);
     dispatch(getRiderOrders('shipped', user?.id, setLoad));
@@ -48,10 +66,60 @@ const CurrentDeliveryScreen = ({ navigation }) => {
       setRefreshing(false);
     }, 1000);
   };
+//   useEffect(() => {
+//     requestBluetoothPermissions()
+// }, [])
+  // const checkBluetooth = async () => {
+
+  // const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
+
+  //     if (!connectedPrinter) {
+  //       Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+  //       await RNBluetoothClassic.requestBluetoothEnabled();
+  //       return false;
+  //     }
+
+  //   const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+  //   // const bondedDevices = await RNBluetoothClassic.openSettings();
+
+  //   if (!bondedDevices || bondedDevices?.length === 0) {
+  //     Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+  
+
+  //     if (Platform.OS === 'android') {
+  //        RNBluetoothClassic.openBluetoothSettings()
+  //       // Linking.openSettings();
+  //     } else {
+  //       Linking.openURL('App-Prefs:root=Bluetooth');
+  //     }
+  
+  //     return false;
+  //   }
+  
+  //   if (bondedDevices?.length > 1) {
+  //     Toast.show(
+  //       'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
+  //       Toast.LONG
+  //     );
+  
+  //     if (Platform.OS === 'android') {
+  //        RNBluetoothClassic.openBluetoothSettings()
+  //       // Linking.openSettings();
+  //     } else {
+  //       Linking.openURL('App-Prefs:root=Bluetooth');
+  //     }
+  
+  //     return false;
+  //   }
+  // }
 
   return (
     <Body>
       <TextHeader title={'Current Orders'} />
+
+      {/* <CustomButton 
+      onPress={checkBluetooth}
+      /> */}
       {load ? (
         <View style={{ flex: 1, marginTop: verticalScale(10) }}>
           <RowSkeleton />
