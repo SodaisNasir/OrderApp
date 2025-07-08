@@ -6,6 +6,7 @@
  */
 import React, { useEffect } from 'react';
 import {
+  Platform,
   SafeAreaView,
   StyleSheet,
 } from 'react-native';
@@ -16,6 +17,7 @@ import store from './src/Redux/Strore';
 import {OneSignal, LogLevel} from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getOrders, getRiderDeliveries } from './src/Redux/Reducers/Actions';
+import SplashScreen from 'react-native-splash-screen';
 
 function App() {
   const dispatch = useDispatch();
@@ -117,7 +119,13 @@ useEffect(() => {
     //   OneSignal.User.pushSubscription.removeEventListener("change", () => {});
     // };
   }, []);
-
+  if (Platform.OS !== 'ios') {
+      setTimeout(() => {
+        SplashScreen.hide();
+      }, 3500);
+    } else {
+      SplashScreen.hide();
+    }
   const check = async ()=>{
     const notification =  await AsyncStorage.getItem('onesignaltoken');
     console.log('notification ======>', notification)

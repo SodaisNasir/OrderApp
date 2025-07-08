@@ -25,9 +25,10 @@ import { QRCodeUrl, apiUrl, imageUrl } from '../../../important/Urls';
 import { getPDFData, orderDelivrdAPI, updateOrderStatus } from '../../Redux/Reducers/Actions';
 import { useDispatch } from 'react-redux';
 import ThermalPrinter from 'react-native-thermal-printer';
-import { BluetoothStateManager } from "react-native-bluetooth-state-manager";
+// import { BluetoothStateManager } from "react-native-bluetooth-state-manager";
 import { PoppinsFont } from '../../Constants/fonts';
 import Toast from 'react-native-simple-toast';
+import RNBluetoothClassic from 'react-native-bluetooth-classic';
 
 const OrderDetailsScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,17 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [pdfData, setpdfData] = useState(null);
   const navigationRoute = useNavigation()
 
-  console.log('order', JSON.stringify(order));
+  // console.log('order', JSON.stringify(order));
+
+  useEffect(() => {
+      if (Platform.OS === 'android') {
+        PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        ]);
+      }
+  }, [])
+  
 
   useFocusEffect(
     useCallback(() => {
@@ -48,12 +59,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         .getParent()
         ?.setOptions({ tabBarStyle: { display: 'none' }, swipeEnabled: false });
       getPDFData(setpdfData, order?.id);
-      if (Platform.OS === 'android') {
-        PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        ]);
-      }
+   
       const fetchDevices = async () => {
         try {
           const list = await ThermalPrinter.getBluetoothDeviceList();
@@ -83,28 +89,59 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           ? 'pending'
           : 'delivered';
     try {
-      const connectedPrinter = await BluetoothStateManager.getState();
+      // const connectedPrinter = await BluetoothStateManager.getState();
 
-      if (connectedPrinter == 'PoweredOff') {
-        Toast.show('Bluetooth is currently disabled', Toast.SHORT);
-        await BluetoothStateManager.requestToEnable();
-        return;
-      }
+      // if (connectedPrinter == 'PoweredOff') {
+      //   Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+      //   await BluetoothStateManager.requestToEnable();
+      //   return;
+      // }
 
-      //   const deviceList = await ThermalPrinter.getBluetoothDeviceList();
-      // setDevices(deviceList); // optional: update state for UI
+      // //   const deviceList = await ThermalPrinter.getBluetoothDeviceList();
+      // // setDevices(deviceList); // optional: update state for UI
 
-      if (!devices || devices.length === 0) {
+      // if (!devices || devices.length === 0) {
+      //   Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+      //   await BluetoothStateManager.openSettings();
+      //   return;
+      // }
+
+      // if (devices.length > 1) {
+      //   Toast.show('Multiple Bluetooth devices found. Please unpair others to avoid conflict.', Toast.LONG);
+      //   await BluetoothStateManager.openSettings();
+      //   return;
+      // }
+
+
+      const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+
+      if (!bondedDevices || bondedDevices.length === 0) {
         Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
-        await BluetoothStateManager.openSettings();
-        return;
+    
+        if (Platform.OS === 'android') {
+          Linking.openSettings();
+        } else {
+          Linking.openURL('App-Prefs:root=Bluetooth');
+        }
+    
+        return false;
       }
-
-      if (devices.length > 1) {
-        Toast.show('Multiple Bluetooth devices found. Please unpair others to avoid conflict.', Toast.LONG);
-        await BluetoothStateManager.openSettings();
-        return;
+    
+      if (bondedDevices.length > 1) {
+        Toast.show(
+          'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
+          Toast.LONG
+        );
+    
+        if (Platform.OS === 'android') {
+          Linking.openSettings();
+        } else {
+          Linking.openURL('App-Prefs:root=Bluetooth');
+        }
+    
+        return false;
       }
+    
 
       const selectedPrinter = devices[0];
 
@@ -604,7 +641,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           paddingVertical: scale(20),
         }}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back-outline" size={24} color="black" />
+          <Ionicons name="arrow-back-outline" size={24} color="white" />
         </TouchableOpacity>
       </View>
       <View
