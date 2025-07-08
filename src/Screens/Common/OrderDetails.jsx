@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   PermissionsAndroid,
   Platform,
+  Linking,
 } from 'react-native';
 import { Colors } from '../../../important/Colors';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
@@ -570,6 +571,25 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       console.log('Failed to print:', err);
     }
   };
+
+  const openInGoogleMaps = () => {
+
+    // const addresDetails = {
+    //   Shipping_city: '123',
+    //   Shipping_address_2: 'Street No 5, Islamabad, Pakistan'
+    // };
+
+    //     Shipping_city: '123',
+    // Shipping_address_2: 'Street No 5, Islamabad, Pakistan'
+
+    const { Shipping_address_2, Shipping_city, } = order
+    const fullAddress = `${Shipping_city} ${Shipping_address_2}`;
+
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+    Linking.openURL(url).catch(err => console.error('Error opening Google Maps:', err));
+  };
+
+
   return (
     <>
       <View
@@ -1010,7 +1030,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <Text>{order.Shipping_postal_code}</Text>
               </View>
 
-            {order?.order_type != 'pickup' &&  <View style={styles.addressCon}>
+              {order?.order_type != 'pickup' && <View style={styles.addressCon}>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={styles.titlee}>Street:  </Text>
@@ -1148,34 +1168,71 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           ) :
             null
           }
-          {order?.status == 'shipped' && <TouchableOpacity
-            disabled={loading2}
-            onPress={() => handleRiderConfirm('delivered')}
-            style={[
-              {
-                justifyContent: 'center',
-                borderRadius: 10,
-                // borderBottomLeftRadius: scale(10),
-                backgroundColor: '#22C55E',
-                alignSelf: 'center',
-                width: '90%',
+          {order?.status == 'shipped' &&
+            <View
+              style={{
+                height: '7%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 marginTop: scale(20),
                 marginBottom: 10,
-                alignItems: 'center',
-                height: '7%',
-                borderBottomLeftRadius: scale(10),
-                borderBottomRightRadius: scale(10),
-              },
-            ]}>
-            {!loading2 ? (
-              <Text style={{ color: Colors.textColor }}>Confirm</Text>
-            ) : (
-              <ActivityIndicator
-                size={'small'}
-                color={Colors.white}
-              />
-            )}
-          </TouchableOpacity>}
+                paddingHorizontal: 4
+              }}
+            >
+
+              <TouchableOpacity
+                onPress={openInGoogleMaps}
+                style={[
+                  {
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    // borderBottomLeftRadius: scale(10),
+                    backgroundColor: Colors.primary,
+                    alignSelf: 'center',
+                    width: '47%',
+                    // marginTop: scale(20),
+                    // marginBottom: 10,
+                    alignItems: 'center',
+                    height: '95%',
+                    borderBottomLeftRadius: scale(10),
+                    borderBottomRightRadius: scale(10),
+                  },
+                ]}>
+                <Text style={{ color: Colors.textColor }}>GoTo Map</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                disabled={loading2}
+                onPress={() => handleRiderConfirm('delivered')}
+                style={[
+                  {
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    // borderBottomLeftRadius: scale(10),
+                    backgroundColor: '#22C55E',
+                    alignSelf: 'center',
+                    width: '47%',
+                    // marginTop: scale(20),
+                    // marginBottom: 10,
+                    alignItems: 'center',
+                    height: '95%',
+                    borderBottomLeftRadius: scale(10),
+                    borderBottomRightRadius: scale(10),
+                  },
+                ]}>
+                {!loading2 ? (
+                  <Text style={{ color: Colors.textColor }}>Confirm</Text>
+                ) : (
+                  <ActivityIndicator
+                    size={'small'}
+                    color={Colors.white}
+                  />
+                )}
+              </TouchableOpacity>
+
+            </View>
+          }
         </View>
       </View>
     </>
