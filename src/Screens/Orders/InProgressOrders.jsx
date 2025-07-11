@@ -15,7 +15,7 @@ const InProgressOrdersScreen = ({navigation}) => {
   const inprogressOrders = useSelector(state => state.auth?.inProgressOrders);
     const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const type = user?.role_id === '1' ? 'kitchen' : null;
+  const type = user?.role_id == '1' ? 'kitchen' : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -34,7 +34,7 @@ const InProgressOrdersScreen = ({navigation}) => {
     setIsRefreshing(false);
   };
 
-  console.log('inprogressOrders', inprogressOrders)
+  // console.log('inprogressOrders', inprogressOrders)
   
 
   return (

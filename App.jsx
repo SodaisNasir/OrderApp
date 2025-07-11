@@ -19,9 +19,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getOrders, getRiderDeliveries } from './src/Redux/Reducers/Actions';
 import SplashScreen from 'react-native-splash-screen';
 
+
 function App() {
   const dispatch = useDispatch();
-   
+
 
 //   useEffect(() => {
 //   // Initialize OneSignal SDK with your app ID

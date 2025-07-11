@@ -1,5 +1,5 @@
 import {useFocusEffect} from '@react-navigation/native';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   FlatList,
   PermissionsAndroid,
@@ -7,27 +7,112 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import ThermalPrinter from 'react-native-thermal-printer';
 import {useDispatch, useSelector} from 'react-redux';
 import CustomButton from '../../Components/CustomButton';
 import {Colors} from '../../../important/Colors';
-import {getOrders, getRiderDeliveries} from '../../Redux/Reducers/Actions';
+import {
+  getOrders,
+  getRiderDeliveries,
+  updateOrderStatus,
+} from '../../Redux/Reducers/Actions';
 import {ListComponent} from '../../Components/ListComponent';
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Toast from 'react-native-simple-toast';
+import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import ThermalPrinter from 'react-native-thermal-printer';
+import {Pusher} from '@pusher/pusher-websocket-react-native';
+import BluetoothModal from '../../Components/Modal/BluetoothModal';
+import Feather from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Sound from 'react-native-sound';
+import {PoppinsFont} from '../../Constants/fonts';
+import {BluetoothEscposPrinter} from 'react-native-thermal-receipt-printer';
+
+// await BluetoothEscposPrinter.printText(receiptText, {
+//   encoding: 'GBK',
+//   codepage: 0,
+//   widthtimes: 0,
+//   heigthtimes: 0,
+//   fonttype: 1,
+// });
 
 const NewOrdersScreen = ({navigation}) => {
-  const dispatch = useDispatch();
-  const [devices, setDevices] = useState([]);  
-  const [isRefreshing, setIsRefreshing] = useState(false)
+ const dispatch = useDispatch();
+  const [loading, setLoading] = useState(false);
+  const [loading2, setLoading2] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedMac, setSelectedMac] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isPrintingEnabled, setIsPrintingEnabled] = useState(false);
+  const [allPairDevices, setAllPairDevices] = useState([]);
 
   const user = useSelector(state => state.auth?.userDetails);
   const orders = useSelector(state => state.auth?.newOrders);
+  const printedOrderIdsRef = useRef([]);
+  const failedOrderIdsRef = useRef([]);
 
-  // console.log('orders', JSON.stringify(orders))
+  const Playbell = () => {
+    const bell = new Sound(require('../../assets/ding.mp3'), error => {
+      if (error) {
+        console.log('Failed to load sound', error);
+        return;
+      }
+      bell.setNumberOfLoops(-1);
+      bell.play();
+
+      // Stop after 5 seconds
+      setTimeout(() => {
+        bell.stop(() => {
+          bell.release(); // Free memory
+        });
+      }, 5000);
+    });
+  };
+
+  const connectToPussher = async pusher => {
+    try {
+      await pusher.init({
+        apiKey: 'a1964c3ac950c1a0cdf5',
+        cluster: 'mt1',
+      });
+      await pusher.subscribe({
+        channelName: 'orders',
+        onEvent: event => {
+          // console.log('Ye Chal Raha ha');
+          console.log(`Got channel event: ${event.data}`);
+          // alert('b')
+          if (event.eventName === 'new_order') {
+            dispatch(getOrders('neworder'));
+            Playbell();
+          }
+        },
+      });
+
+      await pusher.connect();
+    } catch (error) {
+      console.log('connectToPussher error:', error);
+    }
+  };
+
+  useEffect(() => {
+    const pusher = Pusher.getInstance();
+    connectToPussher(pusher);
+    return async () => {
+      await pusher.unsubscribe({channelName: 'orders'});
+      await pusher.disconnect();
+    };
+  }, []);
+
+  const handlePrinterCheck = async () => {
+    const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+    setAllPairDevices(bondedDevices);
+  };
+  handlePrinterCheck();
 
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
@@ -37,517 +122,512 @@ const NewOrdersScreen = ({navigation}) => {
         tabBarStyle: {display: 'flex', backgroundColor: Colors.primary},
         swipeEnabled: true,
       });
-        setIsRefreshing(true);
-        if (user?.role_id == 2) {
-          dispatch(getRiderDeliveries(user.id));
-        } else {
-          dispatch(getOrders('neworder'));
+      setIsRefreshing(true);
+      if (user?.role_id == 2) {
+        dispatch(getRiderDeliveries(user.id));
+      } else {
+        dispatch(getOrders('neworder'));
+      }
+      setIsRefreshing(false);
+
+      const fetchDevices = async () => {
+        try {
+          const list = await ThermalPrinter.getBluetoothDeviceList();
+          console.log('Devices:', list);
+          setDevices(list);
+          if (list.length > 0) setSelectedMac(list[0].macAddress);
+        } catch (err) {
+          console.log('Error getting devices', err);
         }
-        setIsRefreshing(false);
-      }, []),
-    );
+      };
 
-    const handleRefresh = async () => {
-  setIsRefreshing(true);
-  
-  if (user?.role_id == 2) {
-    await dispatch(getRiderDeliveries(user.id));
-  } else {
-    await dispatch(getOrders('neworder'));
-  }
+      fetchDevices();
+    }, []),
+  );
 
-  setIsRefreshing(false);
-};
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
 
-  //   const printRecpit = async QRCODE => {
-  //     const results = await RNHTMLtoPDF.convert({
-  //       // html: pdfData,
-  //       html: `<!DOCTYPE html>
-  // <html lang="de">
-
-  // <head>
-  //     <meta charset="UTF-8">
-  //     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  //     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  //     <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
-  //     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-  //     <title>Quittung</title>
-  //     <style type="text/css">
-  //         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
-
-  //         @media print {
-  //             .button {
-  //                 display: none;
-  //             }
-
-  //             @page {
-  //                 margin-top: 0;
-  //                 margin-bottom: 0;
-  //             }
-
-  //             body {
-  //                 max-height: fit-content;
-  //                 max-width: fit-content;
-  //                 padding-top: 10px;
-  //                 padding-bottom: 10px;
-
-  //             }
-  //         }
-
-  //         body {
-  //             font-family: sans-serif;
-  //             font-size: 18px;
-  //         }
-
-  //         .receipt-container {
-  //             border: none;
-  //             width: 56mm;
-  //             text-align: center;
-  //             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-
-  //         }
-
-  //         .header-logo {
-  //             display: flex;
-  //             justify-content: center;
-  //             align-items: center;
-  //             margin-bottom: 8px;
-  //             /* Increased bottom margin for header */
-  //         }
-
-  //         .logo {
-  //             width: 45px;
-  //             /* Slightly larger logo for modern feel */
-  //             height: 45px;
-  //             margin-right: 12px;
-  //             /* More space next to logo */
-  //         }
-
-  //         .company-name {
-  //             font-size: 18px;
-  //             /* Slightly larger company name */
-  //             margin: 0;
-  //             text-align: left;
-  //             margin-left: 0;
-  //             font-weight: bold;
-  //             /* Black company name */
-  //         }
-
-  //         .order-details-header,
-  //         .item-details,
-  //         .footer-totals,
-  //         .footer-message,
-  //         .order-info {
-  //             text-align: left;
-  //             margin-top: 5px;
-  //             margin-bottom: 5px;
-  //             font-weight: bold;
-
-  //         }
-
-  //         .company-details h3,
-  //         .order-details-header h1,
-  //         .item-details table th,
-  //         .item-details table td,
-  //         .footer-totals ul li,
-  //         .footer-message p,
-  //         .order-info h3 {
-  //             font-size: 14px;
-  //             margin: 3px 0;
-  //             font-weight: bold;
-
-  //         }
-
-  //         /* Lighter company details text */
-  //         .order-details-header h1 {
-  //             font-size: 16px;
-  //             font-weight: bold;
-  //             text-align: center;
-  //             margin-bottom: 10px;
-  //         }
-
-  //         /* Slightly larger, bolder header */
-  //         .item-details table th {
-  //             font-weight: bold;
-  //             padding-bottom: 8px;
-  //             font-size: 14px;
-  //             text-transform: uppercase;
-  //             letter-spacing: 0.5px;
-  //         }
-
-  //         /* Uppercase headers */
-  //         .item-details table td {
-  //             padding: 5px 0;
-  //             border-bottom: 1px dashed #000;
-  //         }
-
-  //         /* Lighter, dashed item separator */
-  //         .footer-totals ul {
-  //             padding: 0;
-  //             list-style: none;
-  //             margin-top: 10px;
-  //             padding-top: 10px;
-  //         }
-
-  //         /* Top border for totals */
-  //         .footer-totals ul li {
-  //             display: flex;
-  //             justify-content: space-between;
-  //             font-size: 13px;
-  //             margin-bottom: 3px;
-  //         }
-
-  //         /* Slightly more margin for totals */
-  //         .footer-totals ul li span {
-  //             text-align: right;
-  //             font-weight: bold;
-  //         }
-
-  //         /* Bold total amounts */
-  //         .footer-message p {
-  //             font-weight: bold;
-  //             text-align: center;
-  //             padding-top: 12px;
-  //             font-size: 13px;
-  //             color: #000;
-  //         }
-
-  //         /* More prominent thank you message */
-
-  //         .order-info h3 {
-  //             font-size: inherit;
-  //             margin: 3px 0;
-  //             font-weight: bold;
-  //             font-size: 12px;
-  //             color: Black;
-  //             /* Lighter order info text */
-  //         }
-
-  //         .item-name {
-  //             font-weight: bold;
-
-  //         }
-
-  //         .item-options {
-  //             font-size: 12px;
-  //         }
-
-  //         .total-price {
-  //             font-weight: bold;
-  //             text-align: right;
-  //         }
-
-  //         .payment-method-info {
-  //             margin-top: 12px;
-  //             text-align: center;
-  //             font-size: 12px;
-  //             /* Lighter payment info text */
-  //             border-top: 1px solid #000;
-  //             /* Separator for payment info */
-  //             padding-top: 10px;
-  //         }
-
-  //         .company-details h3,
-  //         .order-info h3 {
-  //             line-height: 1.4;
-  //             /* Improved line height for details */
-  //         }
-
-  //         .order-info {
-  //             text-align: center;
-  //         }
-
-  //         .item-notes {
-  //             font-size: 0.7rem;
-  //             color: black;
-  //             /* Slightly lighter for a subdued look */
-  //             margin-top: 4px;
-  //             white-space: pre-wrap;
-  //             /* Preserves line breaks */
-  //         }
-  //     </style>
-  // </head>
-
-  // <body>
-  // <div class="receipt-container print">
-  //         <div class="header-logo">
-  //             <img src="https://xn--pizzablitzstringen-m3b.de/pizza_blitz/admin_panel/images/logo.png" style="width: 38%">
-  //             <h3 class="company-name"> pizzablitzöstringen.de</h3>
-  //         </div>
-
-  //         <div class="company-details">
-  //             <h3>pizzablitzöstringen.de Östringen</h3>
-  //             <h3>Kuhngasse 1, 76684
-  //                 Östringen</h3>
-  //             <h3>Östringen,
-  //                 Tell:0725326560-61</h3>
-  //             <h3>Befehl no:</h3>
-  //         </div>
-
-  //         <div class="order-info">
-  //             <h3>2025-06-05 10:54:00</h3>
-
-  //             <h3>Phone: +4917682540212</h3>
-
-  //             <h3>Email:
-  //                 Jonas.bender.1@web.de</h3>
-
-  //             <h3>Address: </h3>
-  //             <h3>Name: </h3>
-
-  //         </div>
-
-  //         <div class="order-details-header">
-  //             <h1>Befehl Einzelheiten*</h1>
-  //         </div>
-
-  //         <div class="item-details">
-  //             <table style="width: 100%; border-collapse: collapse;">
-  //                 <thead>
-  //                     <tr>
-  //                         <th style="text-align: left;">Qty</th>
-  //                         <th style="text-align: left; width: 60%;">Menge</th>
-  //                         <th style="text-align: right;">Preis</th>
-  //                     </tr>
-  //                 </thead>
-  //                 <tbody>
-  //                     <tr>
-  //                         <td>x3</td>
-  //                         <td>
-  //                             <div class="item-name">Schnitzel Gorgonzola</div>
-
-  //                             <div class="item-options"> </div>
-  //                         </td>
-  //                         <td class="total-price">
-  //                             €47.70 </td>
-  //                     </tr>
-  //                 </tbody>
-  //             </table>
-  //         </div>
-
-  //         <div class="footer-totals">
-  //             <ul>
-  //                 <li><span>Zwischensumme:</span><span>€47.70</span></li>
-  //                 <li><span>Rabatt:</span><span>-€0.00</span></li>
-  //                 <li><span>Lieferung:</span><span>€0.00</span></li>
-  //                 <li><span>MwSt. (7%):</span><span>€3.12</span></li>
-  //                 <li><span>MwSt. (19%):</span><span>€0.00</span></li>
-  //                 <li><span>Gesamt:</span><span>€47.70</span></li>
-
-  //             </ul>
-  //         </div>
-
-  //         <div class="payment-method-info">
-  //             Zahlungsmethode: cash </div>
-
-  //         <div class="footer-message">
-  //             <p>Vielen Dank für Ihren Einkauf!</p>
-  //         </div>
-  //     </div>
-  // </body>
-
-  // </html>`,
-
-  //       fileName: `Recipt_${Math.floor(Math.random() * 10000)}`,
-  //       base64: true,
-  //       // height:2000,
-  //       // width:100,
-  //     });
-
-  //     await RNPrint.print({filePath: results.filePath});
-  //     // setLoading(false);
-  //   };
-
-
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-      );
+    if (user?.role_id == 2) {
+      await dispatch(getRiderDeliveries(user.id));
+    } else {
+      await dispatch(getOrders('neworder'));
     }
 
-    // const fetchDevices = async () => {
-    //   try {
-    //     const list = await ThermalPrinter.getBluetoothDeviceList();
-    //     console.log('Devices:', list);
-    //     setDevices(list);
-    //     if (list.length > 0) setSelectedMac(list[0].macAddress);
-    //   } catch (err) {
-    //     console.log('Error getting devices', err);
-    //   }
-    // };
+    setIsRefreshing(false);
+  };
 
-    // fetchDevices();
+  async function requestBluetoothPermissions() {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
+    
+        const allGranted = Object.values(granted).every((p) => p === PermissionsAndroid.RESULTS.GRANTED);
+        console.log('allGranted', allGranted)
+        return allGranted;
+      }
+    
+      return true;
+    }
+
+  useEffect(() => {
+ requestBluetoothPermissions()
   }, []);
+  
 
-  // const orderData = {
-  //   orderNo: 123456,
-  //   date: '2025-06-05 10:54',
-  //   phone: '+4917682540212',
-  //   email: 'Jonas.bender.1@web.de',
-  //   items: [
-  //     {name: 'Schnitzel Gorgonzola', qty: 3, price: 47.7},
-  //     {name: 'Pizza Margherita', qty: 2, price: 19.8},
-  //     {name: 'Cola 0.5L', qty: 4, price: 7.6},
-  //   ],
-  //   paymentMethod: 'Cash',
-  //   subtotal: 75.1,
-  //   discount: 0.0,
-  //   delivery: 0.0,
-  //   tax7: 5.26,
-  //   tax19: 0.0,
-  //   total: 75.1,
-  // };
+  // useEffect(() => {
+  //   const loadSavedPrinter = async () => {
+  //     try {
+  //       const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
+  //       console.log('saveMac', savedMac)
+  //       if (savedMac) {
+  //         setSelectedMac(savedMac);
+  //       }
+  //     } catch (e) {
+  //       console.log('Failed to load selected printer:', e);
+  //     }
+  //   };
+  //   loadSavedPrinter();
+  // }, []);
 
-  // const htmlTemplate = `
-  //  <!DOCTYPE html>
-  //     <html>
-  //     <head>
-  //       <style>
-  //         body {
-  //           font-family: sans-serif;
-  //           font-size: 14px;
-  //         }
-  //         .receipt-container {
-  //           width: 58mm;
-  //           margin: 0 auto;
-  //           padding: 10px;
-  //           text-align: center;
-  //         }
-  //         table {
-  //           width: 100%;
-  //           border-collapse: collapse;
-  //           margin-top: 10px;
-  //         }
-  //         td, th {
-  //           padding: 5px;
-  //           font-size: 12px;
-  //           text-align: left;
-  //         }
-  //         .totals {
-  //           margin-top: 10px;
-  //           font-size: 12px;
-  //         }
-  //         .totals div {
-  //           display: flex;
-  //           justify-content: space-between;
-  //         }
-  //         .footer {
-  //           margin-top: 15px;
-  //           font-size: 12px;
-  //           font-weight: bold;
-  //         }
-  //       </style>
-  //     </head>
-  //     <body>
-  //       <div class="receipt-container">
-  //         <h2>pizzablitz.de Östringen</h2>
-  //         <p>Kuhngasse 1, 76684 Östringen<br/>Tel: 0725326560-61</p>
-  //         <p><strong>Bestellung Nr:</strong> ${orderData.orderNo}</p>
-  //         <p>${orderData.date}</p>
-  //         <p><strong>Phone:</strong> ${orderData.phone}</p>
-  //         <p><strong>Email:</strong> ${orderData.email}</p>
+  const handleTogglePrint = async () => {
+    setIsPrintingEnabled(prev => {
+      const nextValue = !prev;
 
-  //         <h3>Artikel</h3>
-  //         <table style="width: 100%; border-collapse: collapse;">
-  //                 <thead>
-  //                     <tr>
-  //                         <th style="text-align: left;">Qty</th>
-  //                         <th style="text-align: left; width: 60%;">Menge</th>
-  //                         <th style="text-align: right;">Preis</th>
-  //                     </tr>
-  //                 </thead>
-  //                 <tbody>
-  //                     <tr>
-  //                         <td>x3</td>
-  //                         <td>
-  //                             <div class="item-name">Schnitzel Gorgonzola</div>
+      if (nextValue) {
+        (async () => {
+          const connectedPrinter =
+            await RNBluetoothClassic.isBluetoothEnabled();
+          if (!connectedPrinter) {
+            Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+            await RNBluetoothClassic.requestBluetoothEnabled();
+            setModalVisible(true);
+            return;
+          }
 
-  //                             <div class="item-options"> </div>
-  //                         </td>
-  //                         <td class="total-price">
-  //                             €47.70 </td>
-  //                     </tr>
-  //                 </tbody>
-  //             </table>
+          // if (!selectedMac) {
+          //   // Try to load from storage again (edge case)
+          //   const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
+          //   if (savedMac) {
+          //     setSelectedMac(savedMac);
+          //   } else {
+          //     setModalVisible(true); // Still not found
+          //     return;
+          //   }
+          // }
 
-  //         <div class="totals">
-  //           <div><span>Zwischensumme:</span><span>€${orderData.subtotal.toFixed(2)}</span></div>
-  //           <div><span>Rabatt:</span><span>-€${orderData.discount.toFixed(2)}</span></div>
-  //           <div><span>Lieferung:</span><span>€${orderData.delivery.toFixed(2)}</span></div>
-  //           <div><span>MwSt. (7%):</span><span>€${orderData.tax7.toFixed(2)}</span></div>
-  //           <div><span>MwSt. (19%):</span><span>€${orderData.tax19.toFixed(2)}</span></div>
-  //           <div><strong>Gesamt:</strong><strong>€${orderData.total.toFixed(2)}</strong></div>
-  //         </div>
+          const unprintedOrders = orders?.filter(
+            o =>
+              !printedOrderIdsRef.current.includes(o.id) &&
+              !failedOrderIdsRef.current.includes(o.id),
+          );
 
-  //         <div class="footer">
-  //           Zahlungsmethode: ${orderData.paymentMethod}<br/>
-  //           Vielen Dank für Ihren Einkauf!
-  //         </div>
-  //       </div>
-  //     </body>
-  //     </html>
-  // `;
+          if (unprintedOrders?.length > 0) {
+            const firstOrder = unprintedOrders[0];
+            console.log('Immediately printing first order:', firstOrder.id);
+            autoPrintOrder(firstOrder);
+          }
+        })();
+      }
 
-  // const textPayload = htmlToText(htmlTemplate, {
-  //   wordwrap: false,
-  // });
+      return nextValue;
+    });
+  };
 
-  // console.log(textPayload)
+  useEffect(() => {
+    if (!isPrintingEnabled) return;
 
-//   const printReceipt = async () => {
-//     const payload = `
-//                 pizzablitz.de
-//          Kuhngasse 1, 76684 Östringen
-//               Tel: 0725326560-61
+    const interval = setInterval(() => {
+      if (!orders || orders.length === 0) return;
 
-//             Bestellung Nr: ${orderData.orderNo}
+      // Print new orders not yet printed or failed
+      const unprintedOrders = orders.filter(
+        o =>
+          !printedOrderIdsRef.current.includes(o.id) &&
+          !failedOrderIdsRef.current.includes(o.id),
+      );
 
-//               Datum: ${orderData.date}
-//             Telefon: ${orderData.phone}
-//           Email: ${orderData.email}
+      if (unprintedOrders.length > 0) {
+        const orderToPrint = unprintedOrders[0];
+        console.log('Auto-printing order:', orderToPrint.id);
+        autoPrintOrder(orderToPrint);
+        return;
+      }
 
-// ------------------------------------------------
-// Menge         Produkt                 Preis
-// ------------------------------------------------
-// ${orderData.items
-//   .map(
-//     item =>
-//       `${item.qty.toString().padEnd(6)}     ${item.name
-//         .slice(0, 14)
-//         .padEnd(14)}              ${item.price.toFixed(2)}`,
-//   )
-//   .join('\n')}
+      // Retry failed orders
+      if (failedOrderIdsRef.current.length > 0) {
+        const retryId = failedOrderIdsRef.current[0];
+        const retryOrder = orders.find(o => o.id === retryId);
 
-// ------------------------------------------------
-// Zwischensumme:                         ${orderData.subtotal.toFixed(2)}
+        if (retryOrder) {
+          console.log('Retrying failed order:', retryOrder.id);
+          autoPrintOrder(retryOrder);
+        }
+      }
+    }, 15000); // every 15 seconds
 
-// Rabatt:                                ${orderData.discount.toFixed(2)}
+    console.log('ye chal raha ha ');
+    return () => clearInterval(interval);
+  }, [orders, isPrintingEnabled]);
 
-// Lieferung:                             ${orderData.delivery.toFixed(2)}
+ const autoPrintOrder = async order => {
+  try {
+    const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
 
-// MwSt. (7%):                            ${orderData.tax7.toFixed(2)}
+      if (!connectedPrinter) {
+        Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+        await RNBluetoothClassic.requestBluetoothEnabled();
+        return false;
+      }
 
-// MwSt. (19%):                           ${orderData.tax19.toFixed(2)}
-// -----------------------------------------------
-// Gesamt:                                ${orderData.total.toFixed(2)}
+      const bondedDevices = await RNBluetoothClassic.getBondedDevices();
 
-// Zahlungsmethode:           ${orderData.paymentMethod}
-// ================================================
-//                   Vielen Dank!
-// `;
-//     try {
-//       const result = await ThermalPrinter.printBluetooth({
-//         payload,
-//         macAddress: selectedMac,
-//         printerWidthMM: 58,
-//         printerNbrCharactersPerLine: 42,
-//       });
-//       console.log('Printed result:', result);
-//     } catch (error) {
-//       console.log('Print error:', error);
-//     }
-//   };
+      if (!bondedDevices || bondedDevices?.length === 0) {
+        Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+    
+        if (Platform.OS === 'android') {
+         RNBluetoothClassic.openBluetoothSettings()
+        } else {
+           RNBluetoothClassic.openBluetoothSettings()
+        }
+    
+        return false;
+      }
+    
+      if (bondedDevices?.length > 1) {
+        Toast.show(
+          'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
+          Toast.LONG
+        );
+    
+        if (Platform.OS === 'android') {
+         RNBluetoothClassic.openBluetoothSettings()
+        } else {
+           RNBluetoothClassic.openBluetoothSettings()
+        }
+    
+        return false;
+      }
+    
+
+      const selectedPrinter = devices[0];
+
+      // Optional: You may validate the printer name prefix
+      // if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
+      //   Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
+      //   return;
+      // }
+
+      // Set selected MAC address and proceed with print
+      setSelectedMac(selectedPrinter.macAddress);
+
+    const status = order.status === 'neworder' ? 'pending' : order.status;
+
+    dispatch(
+      updateOrderStatus(
+        status,
+        order.id,
+        printReceipt,
+        // async () => {
+        //   console.log('[AutoPrint] Status updated, starting print...');
+        //   const result = await printReceipt(order);
+        //   if (result?.success) {
+        //     console.log('[AutoPrint] Print successful');
+        //     printedOrderIdsRef.current.push(order.id);
+        //     Toast.show('Order printed successfully.', Toast.SHORT);
+        //   } else {
+        //     console.warn('[AutoPrint] Print failed');
+        //     Toast.show('Failed to print order.', Toast.SHORT);
+        //     if (!failedOrderIdsRef.current.includes(order.id)) {
+        //       failedOrderIdsRef.current.push(order.id);
+        //     }
+        //   }
+        // },
+        setLoading,
+        order
+      ),
+    );
+  } catch (error) {
+    console.log('[AutoPrint] Error during printing:', error?.message);
+
+    if (!failedOrderIdsRef.current.includes(order.id)) {
+      failedOrderIdsRef.current.push(order.id);
+    }
+
+    if (error?.message === 'User did not enable Bluetooth') {
+      setModalVisible(true);
+    } else {
+      Toast.show(`Print error: ${error.message}`, Toast.SHORT);
+    }
+  }
+};
+
+
+
+  const printReceipt = async order => {
+    const items = order.order_details?.product?.map(product => ({
+      qty: product.qty,
+      name: product.product_details?.name || 'Unnamed',
+      price: (() => {
+        const basePrice = parseFloat(product.price);
+        const addons = JSON.parse(product.addons || '[]');
+        const types = JSON.parse(product.types || '[]');
+        const dressing = JSON.parse(product.dressing || '[]');
+
+        const addonTotal = addons.reduce(
+          (sum, a) => sum + parseFloat(a.as_price || 0),
+          0,
+        );
+        const typeTotal = types.reduce(
+          (sum, t) => sum + parseFloat(t.price || 0),
+          0,
+        );
+        const dressingTotal = dressing.reduce(
+          (sum, d) => sum + parseFloat(d.price || 0),
+          0,
+        );
+
+        return basePrice + addonTotal + typeTotal + dressingTotal;
+      })(),
+    }));
+
+    const sub_total = items.reduce(
+      (acc, item) => acc + item.price * parseInt(item.qty),
+      0,
+    );
+    const dealTotal = order?.order_details?.deals?.reduce((sum, deal) => {
+      return sum + parseFloat(deal.deal_details?.deal_price || 0);
+    }, 0);
+
+    const combinedSubtotal = sub_total + dealTotal;
+
+    const addonData = order.order_details?.product?.map((elem, index) => {
+      const basePrice = parseFloat(elem.price);
+      const qty = parseInt(elem.qty);
+
+      const addons = JSON.parse(elem.addons || '[]');
+      const types = JSON.parse(elem.types || '[]');
+      const dressing = JSON.parse(elem.dressing || '[]');
+
+      return {
+        addons: addons.map(a => ({
+          title: a.ao_title,
+          name: a.as_name,
+          price: parseFloat(a.as_price),
+          quantity: a.quantity,
+        })),
+        types: types.map(t => ({
+          name: t.ts_name,
+          price: parseFloat(t.price),
+        })),
+        dressing: dressing.map(d => ({
+          name: d.dressing_name,
+          price: parseFloat(d.price || 0),
+        })),
+      };
+    });
+
+    const orderData = {
+      orderNo: order?.id,
+      date: order?.created_at,
+      phone: order?.userDetails?.phone,
+      email: order?.userDetails?.email,
+      name: order?.userDetails?.name,
+      shipping: order?.Shipping_address_2,
+      city: order?.Shipping_city,
+      postal: order?.Shipping_postal_code,
+      shipping_address: order?.Shipping_address,
+      shipping_area: order?.Shipping_area,
+      add_notes: order?.addtional_notes,
+      items,
+      paymentMethod: order?.payment_type,
+      subtotal: Number(combinedSubtotal).toFixed(2),
+      discount: Number(order?.total_discount).toFixed(2),
+      delivery: Number(order?.Shipping_Cost).toFixed(2),
+      tax7: Number(order?.total_netto_tax).toFixed(2),
+      tax19: Number(order?.total_metto_tax).toFixed(2),
+      total: Number(order?.order_total_price) + Number(order?.Shipping_Cost),
+      qrCode: order?.qr_code,
+    };
+
+    let receiptText = '';
+    receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Tel: 0725326560-61</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Bestellung Nr: ${orderData.orderNo}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Datum: ${orderData.date}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Telefon: ${orderData.phone}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Email: ${orderData.email}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Adress: ${orderData.shipping_address}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Name: ${orderData.name}\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.shipping}-${orderData.city}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.postal}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]<b>Befehl Einzelheiten*</b>\n \n`;
+    receiptText += '[L]\n';
+    receiptText += '------------------------------------------------\n';
+    receiptText += `<b><font size='tall'>Menge    Produkt                          Preis</font></b> \n`;
+    receiptText += '------------------------------------------------\n';
+
+    orderData.items.forEach((item, idx) => {
+      receiptText += `[L]<b>x${item.qty}     ${
+        item.name
+      } [R]${item.price.toFixed(2)}</b>\n`;
+      receiptText += '[L]\n';
+
+      addonData[idx]?.addons?.forEach(addon => {
+        receiptText += `[L]        <b>x${addon.quantity} ${addon.name}</b>\n`;
+        receiptText += '[L]\n';
+      });
+
+      addonData[idx]?.types?.forEach(type => {
+        if (type.name) receiptText += `[L]        <b>${type.name}</b>\n`;
+        receiptText += '[L]\n';
+      });
+
+      addonData[idx]?.dressing?.forEach(d => {
+        if (d.name) receiptText += `[L]        <b>${d.name}</b>\n`;
+        receiptText += '[L]\n';
+      });
+
+      receiptText += '------------------------------------------------\n';
+    });
+
+    if (order?.order_details?.deals?.length) {
+      order?.order_details?.deals.forEach((deal, dealIndex) => {
+        const dealInfo = deal.deal_details;
+        const dealProducts = deal.deal_product;
+
+        receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(
+          dealInfo.deal_price,
+        ).toFixed(2)}</b>\n`;
+        receiptText += '[L]\n';
+
+        dealProducts.forEach((product, productIndex) => {
+          receiptText += `[L]<b>${product.product_name}</b>\n`;
+          receiptText += '[L]\n';
+
+          // Addons
+          if (product.addons?.length) {
+            product.addons.forEach(addon => {
+              // const price = addon.as_price === "0" || addon.isFreeInDeal === "1" ? "Free" : `${parseFloat(addon.as_price).toFixed(2)}`;
+              receiptText += `[L]        <b>x${addon.quantity} ${addon.as_name}</b>\n`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          // Types
+          const types = JSON.parse(product.types || '[]');
+          if (types.length) {
+            types.forEach(t => {
+              receiptText += `[L]        <b>${t.ts_name}\n</b>`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          // Dressing
+          const dressing = JSON.parse(product.dressing || '[]');
+          if (dressing.length) {
+            dressing.forEach(d => {
+              receiptText += `[L]        <b>${d.dressing_name}</b>\n`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          receiptText += '[L]\n';
+        });
+
+        receiptText += '------------------------------------------------\n';
+      });
+    }
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Zwischensumme:</b> [R]<b>${orderData.subtotal}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Rabatt:</b> [R]<b>${orderData.discount}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Lieferung:</b> [R]<b>${orderData.delivery}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>MwSt. (7%):</b> [R]<b>${orderData.tax7}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>MwSt. (19%):</b> [R]<b>${orderData.tax19}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += '------------------------------------------------\n';
+    receiptText += '[L]\n';
+    receiptText += `[L]<b>Gesamt:</b> [R]<b>${orderData.total}</b>\n\n`;
+
+    receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
+    receiptText += '[L]\n';
+    receiptText += '================================================\n\n';
+    receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
+    receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
+
+ try {
+//   setLoading(true);
+//   setLoading2(true);
+
+//   const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+//   const selectedDevice = bondedDevices.find(d => d.address === selectedMac);
+
+//   if (!selectedDevice) {
+//     throw new Error(`Device with MAC ${selectedMac} not found among bonded devices.`);
+//   }
+
+//   const isConnected = await RNBluetoothClassic.isDeviceConnected(selectedMac);
+// await BluetoothEscposPrinter.connectPrinter(selectedMac);
+
+//   if (!isConnected) {
+//     console.log('Connecting to device...');
+//     await RNBluetoothClassic.connectToDevice(selectedMac);
+//   }
+
+//   console.log('Sending print data...');
+  // await RNBluetoothClassic.writeToDevice(selectedMac, receiptText);
+//   await BluetoothEscposPrinter.printText(receiptText, {
+//   encoding: 'GBK',
+//   codepage: 0,
+//   widthtimes: 0,
+//   heigthtimes: 0,
+//   fonttype: 1,
+// });
+
+ const result = await ThermalPrinter.printBluetooth({
+    payload: receiptText,
+    macAddress: selectedMac, // make sure it's trimmed
+    printerWidthMM: 80,
+    printerNbrCharactersPerLine: 48,
+    autoCut: true,
+    openCashbox: false, // optional
+    mmFeedPaper: 10, // optional
+    printerDpi: 203, // optional, default is usually 203
+  });
+
+  console.log('Printed successfully!', result);
+} catch (err) {
+  console.log('Failed to print:', JSON.stringify(err, null, 2));
+} finally {
+  setLoading(false);
+  setLoading2(false);
+}
+
+
+  };
 
   return (
     <View style={styles.container}>
@@ -564,30 +644,63 @@ const NewOrdersScreen = ({navigation}) => {
             }
           />
         )}
-         refreshControl={
-              <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={()=> handleRefresh()}
-              />
-              }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => handleRefresh()}
+          />
+        }
         ListEmptyComponent={
-          <View style={{ flex: 1, marginTop: '80%', alignItems: "center", justifyContent: 'center',}}>
-                  <MaterialCommunityIcons
-                    name="file-search-outline"
-                    color={Colors.primary}
-                    size={80}
-                  />
-                  <Text
-                    style={{
-                      alignSelf: "center",
-                      marginTop: 15,
-                      fontSize: 18,
-                    }}
-                  >
-                    No Order found
-                  </Text>
+          <View
+            style={{
+              flex: 1,
+              marginTop: '80%',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <MaterialCommunityIcons
+              name="file-search-outline"
+              color={Colors.primary}
+              size={80}
+            />
+            <Text
+              style={{
+                alignSelf: 'center',
+                marginTop: 15,
+                fontSize: 18,
+              }}>
+              No Order found
+            </Text>
           </View>
         }
+      />
+      <View style={styles.print_button}>
+      <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
+        <Text style={{color: isPrintingEnabled ? Colors.buttongrad2 : Colors.white}}>
+          {selectedMac ? selectedMac : 'No Printer Selected'}
+        </Text>
+        <Feather
+          name={'printer'}
+          size={20}
+          color={isPrintingEnabled ? Colors.buttongrad2 : Colors.white}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.down}>
+        <Text style={{color: Colors.white}}>
+          Change Printer
+        </Text>
+        <Feather
+          name={'printer'}
+          size={20}
+          color={Colors.white}
+        />
+      </TouchableOpacity>
+      </View>
+      <BluetoothModal
+        setSelectedMac={setSelectedMac}
+        allPairDevices={allPairDevices}
+        modalVisible={modalVisible}
+        setModalVisible={setModalVisible}
       />
     </View>
   );
@@ -622,6 +735,38 @@ const styles = StyleSheet.create({
   },
   title: {
     color: Colors.iconBackground,
+  },
+
+  print_button:{
+    position: 'absolute',
+    zIndex: 99,
+    right: 20,
+    bottom: 20,
+    gap: 10
+  },
+  up: {
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    backgroundColor: 'rgb(255, 174, 26)',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.white,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  down: {
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    backgroundColor: 'rgb(255, 174, 26)',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.white,
+    flexDirection: 'row',
+    gap: 8,
   },
 });
 

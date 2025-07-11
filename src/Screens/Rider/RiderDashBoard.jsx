@@ -82,9 +82,10 @@ const RiderDashBoard = ({navigation}) => {
         const responseData = await response.json();
         if (responseData.error) {
           alert('Order has alreay been Shipped!');
+          console.log('responseData.error', responseData.error)
           // navigation.navigate('Current Delivery');
         } else {
-          navigation.navigate('Current Delivery');
+          navigation.navigate('All RiderDeliver');
         }
       } catch (error) {
         alert(error);

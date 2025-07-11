@@ -113,7 +113,7 @@ export const getOrders = (type,setLoader) => {
 };
 
 // UPDATE ORDER STATUS
-export const updateOrderStatus = (status, orderId, print, setLoading) => {
+export const updateOrderStatus = (status, orderId, print, setLoading,order) => {
   return async (dispatch) => {
     setLoading(true);
     try {
@@ -138,7 +138,7 @@ export const updateOrderStatus = (status, orderId, print, setLoading) => {
         dispatch(getOrders('pending'));
 
         if(status != 'delivered'){
-          print(data.success.qr_code);
+          print(order);
         }
       } else {
         setLoading(false);

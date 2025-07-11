@@ -29,6 +29,7 @@ import ThermalPrinter from 'react-native-thermal-printer';
 import { PoppinsFont } from '../../Constants/fonts';
 import Toast from 'react-native-simple-toast';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OrderDetailsScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,20 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         ]);
       }
   }, [])
+
+  useEffect(() => {
+    const loadSavedPrinter = async () => {
+      try {
+        const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
+        if (savedMac) {
+          setSelectedMac(savedMac);
+        }
+      } catch (e) {
+        console.error('Failed to load selected printer:', e);
+      }
+    };
+    loadSavedPrinter();
+  }, []);
   
 
   useFocusEffect(
@@ -119,47 +134,18 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         return false;
       }
 
-      const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+       if (!selectedMac) {
+            // Try to load from storage again (edge case)
+            const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
+            if (savedMac) {
+              setSelectedMac(savedMac);
+            } else {
+              setModalVisible(true); // Still not found
+              return;
+            }
+          }
 
-      if (!bondedDevices || bondedDevices?.length === 0) {
-        Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
-    
-        if (Platform.OS === 'android') {
-         RNBluetoothClassic.openBluetoothSettings()
-        } else {
-           RNBluetoothClassic.openBluetoothSettings()
-        }
-    
-        return false;
-      }
-    
-      if (bondedDevices?.length > 1) {
-        Toast.show(
-          'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
-          Toast.LONG
-        );
-    
-        if (Platform.OS === 'android') {
-         RNBluetoothClassic.openBluetoothSettings()
-        } else {
-           RNBluetoothClassic.openBluetoothSettings()
-        }
-    
-        return false;
-      }
-    
-
-      const selectedPrinter = devices[0];
-
-      // Optional: You may validate the printer name prefix
-      if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
-        Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
-        return;
-      }
-
-      // Set selected MAC address and proceed with print
-      setSelectedMac(selectedPrinter.macAddress);
-
+     
     } catch (error) {
       console.log('Bluetooth error:', error);
       Toast.show('Bluetooth error. Make sure a printer is paired and connected.', Toast.LONG);
@@ -172,202 +158,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
     navigationRoute.goBack();
   };
-  // const printRecpit = async QRCODE => {
-  //   const results = await RNHTMLtoPDF.convert({
-  //     // html: pdfData,
-  //     html: `<!DOCTYPE html>
-  //     <html>
-  //     <head>
-  //     <style>
-  //       body {
-  //         font-family: Arial, sans-serif;
-  //       }
-  //       .receipt {
-  //         max-width: 300px;
-  //         margin: 0 auto;
-  //         padding: 20px;
-  //         border: 1px solid #ccc;
-  //         border-radius: 5px;
-  //         background-color: #fff;
-  //       }
-  //       .header {
-  //         text-align: center;
-  //         margin-bottom: 10px;
-  //       }
-  //       .restaurant-info {
-  //         margin-bottom: 10px;
-  //         text-align: center;
-  //       }
-  //       .restaurant-logo {
-  //         max-width: 100px;
-  //         height: auto;
-  //       }
-  //       .customer-info {
-  //         margin-top: 20px;
-  //       }
-  //       .info-label {
-  //         font-weight: bold;
-  //       }
-  //       .item {
-  //         display: flex;
-  //         justify-content: space-between;
-  //         margin-bottom: 5px;
-  //       }
-  //       .item-name {
-  //         flex: 1;
-  //       }
-  //       .item-quantity {
-  //         flex: .1;
-  //       }
-  //       .item-price {
-  //         flex-shrink: 0;
-  //       }
-  //       .total {
-  //         text-align: right;
-  //         margin-top: 10px;
-  //         font-weight: bold;
-  //       }
-  //     </style>
-  //     <script ></script>
-  //     </head>
-  //     <body>
-
-  //     <div class="print"
-  //     style="border:1px solid #a1a1a1; width: 82mm; background: white;padding: 10px; margin: 0 auto; text-align: center;">
-  //     <div class="top_header" style="display: flex;">
-  //         <!-- yahan image ka url dal dioo shahboo -->
-  //         <img src="https://xn--pizzablitzstringen-m3b.de/pizza_blitz/admin_panel/images/logo.png" style="width: 38%">
-  //         <h3 style="font-size: 17px;font-family: sans-serif;margin: 54px 0 0 -20px">pizzablitzöstringen.de</h3>
-  //     </div>
-  //     <div class="middle-header">
-  //         <h3 style="font-size: 15px;font-weight: 800;font-family: math;margin: 7px 0 0 0;">Kuhngasse 1, 76684
-  //             Östringen</h3>
-  //         <h3 style="    font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Östringen,
-  //             Tell:0725326560-61</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">
-  //             Befehl no: ${order?.id}</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.created_at
-  //         }</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Phone: +4917682540212</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Email:
-  //             Jonas.bender.1@web.de</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Address:</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Name: ${
-  //           order?.Shipping_address
-  //         }</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.Shipping_address_2
-  //         } ${order?.Shipping_city}</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.Shipping_postal_code
-  //         } </h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.Shipping_area
-  //         } </h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.addtional_notes
-  //         }
-  //         </h3>
-  //         <div>
-  //             <h1 style="font-size: 16px;font-weight: 700;font-family: sans-serif;    margin: 10px 0 0 0;">
-  //                 Befehl Einzelheiten*</h1>
-  //             <div class="Details">
-  //                 <table style="width: 100%">
-  //                     <thead>
-  //                         <tr>
-  //                             <th style="text-align: left; font-family: sans-serif;">Qty</th>
-  //                             <th style="width: 80%;text-align: left; font-family: sans-serif;">Menge</th>
-  //                             <th style="text-align: left; font-family: sans-serif;">Preis</th>
-  //                         </tr>
-  //                     </thead>
-  //                     <tbody style="font-size: 12px;">
-  //                         ${order.order_details?.product.map(product => {
-  //                           const qty = product.qty;
-  //                           const name = product.product_details.name;
-  //                           const discountedPrice =
-  //                             product.price * (product.discount_percent / 100);
-  //                           const dressing = JSON.parse(product.dressing);
-
-  //                           return `<tr>
-  //                             <td style="text-align: left;">${qty}</td>
-  //                             <td style="text-align: left; width: 80%; font-weight: 500;font-family: sans-serif;">
-  //                                 <b>${name}</b> - <br>
-
-  //                                 ${dressing.map(
-  //                                   item =>
-  //                                     ` <span>
-  //                                     ${item.dressing_title}
-  //                                     <br>
-  //                                 </span>`,
-  //                                 )}
-
-  //                             </td>
-  //                             <td style="text-align: left;"><b>€${discountedPrice}<b></td>
-  //                         </tr>`;
-  //                         })}
-  //                     </tbody>
-  //                 </table>
-  //             </div>
-  //         </div>
-
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Zwischensumme:</li>
-  //                 <li style="width: 50%;text-align: right;">€${Number(
-  //                   order?.order_total_price - order?.Shipping_Cost,
-  //                 ).toFixed(2)}</li>
-  //             </ul>
-  //         </div>
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Lieferladegeräte:</li>
-  //                 <li style="width: 50%;text-align: right;">€${Number(
-  //                   order?.Shipping_Cost,
-  //                 ).toFixed(2)}</li>
-  //             </ul>
-  //         </div>
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Gesamt:</li>
-  //                 <li style="width: 50%;text-align: right;">€${Number(
-  //                   order?.order_total_price,
-  //                 ).toFixed(2)}</li>
-  //             </ul>
-  //         </div>
-
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Bezahlverfahren:</li>
-  //                 <li style="width: 50%;text-align: right;">${
-  //                   order?.payment_type
-  //                 }</li>
-  //             </ul>
-  //         </div>
-  //         <div class="footer">
-  //             <p style="margin: 10px 0 10px 0; padding: 45px; font-weight: 700;font-family: sans-serif;">Danke für
-  //                 Ihren Einkauf*</p>
-  //         </div>
-
-  //         <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center; height: 200px" margin-top:20px>
-  //         <Img
-  //         src="${QRCodeUrl}/${QRCODE}"
-  //         /></div>
-  //     </div>
-  // </div>
-  //     </body>
-  //     </html>`,
-
-  //     fileName: `Recipt_${Math.floor(Math.random() * 10000)}`,
-  //     base64: true,
-  //     // height:2000,
-  //     // width:100,
-  //   });
-
-  //   await RNPrint.print({filePath: results.filePath});
-  //   setLoading(false);
-  // };
-
+ 
   const incrtement = () => {
     setTime(prev => prev + 10);
   };
@@ -378,6 +169,10 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   };
 
   const handleRiderConfirm = (status) => {
+    dispatch(orderDelivrdAPI(status, order.id, printReceipt, setLoading2, navigation));
+  }
+  
+  const handleKitchenConfirm = (status) => {
     dispatch(orderDelivrdAPI(status, order.id, printReceipt, setLoading2, navigation));
   }
 
@@ -397,7 +192,6 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   // console.log('allExtraPrice', allExtraPrice)
 
   const printReceipt = async (qr_codee) => {
-    console.log('qr_codee', qr_codee)
     const items = order.order_details?.product?.map(product => ({
       qty: product.qty,
       name: product.product_details?.name || 'Unnamed',
@@ -469,7 +263,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       delivery: Number(order?.Shipping_Cost).toFixed(2),
       tax7: Number(order?.total_netto_tax).toFixed(2),
       tax19: Number(order?.total_metto_tax).toFixed(2),
-      total: Number(order?.order_total_price).toFixed(2),
+      total: Number(order?.order_total_price) + Number(order?.Shipping_Cost),
       qrCode: order?.qr_code
     };
 
@@ -605,7 +399,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         printerNbrCharactersPerLine: 48,
         autoCut: true,
       });
-      console.log('Printed!', result);
+       Toast.show('Your order has been printed successfully.', Toast.SHORT);
       setLoading(false)
       setLoading2(false)
     } catch (err) {
@@ -1098,7 +892,50 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
             </View>
           </ScrollView>
-          {accountType == 'kitchen' && order.status != 'delivered' && (
+
+          {accountType == 'kitchen' && order.status == 'pending' ? (
+          <View
+              style={{
+                height: '9%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: scale(20),
+                marginBottom: 10,
+                paddingHorizontal: 4
+              }}
+            >
+              <TouchableOpacity
+                disabled={loading2}
+                onPress={() => handleKitchenConfirm('delivered')}
+                style={[
+                  {
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    // borderBottomLeftRadius: scale(10),
+                    backgroundColor: '#22C55E',
+                    alignSelf: 'center',
+                    width: '80%',
+                    // marginTop: scale(20),
+                    // marginBottom: 10,
+                    alignItems: 'center',
+                    height: '95%',
+                    borderBottomLeftRadius: scale(10),
+                    borderBottomRightRadius: scale(10),
+                  },
+                ]}>
+                {!loading2 ? (
+                  <Text style={{ color: Colors.textColor }}>Confirm</Text>
+                ) : (
+                  <ActivityIndicator
+                    size={'small'}
+                    color={Colors.white}
+                  />
+                )}
+              </TouchableOpacity>
+              </View>
+           ) : null}
+          {accountType == 'kitchen' && order.status == 'neworder' && (
             <View
               style={{
                 flex: 0.3,
@@ -1338,3 +1175,251 @@ const styles = StyleSheet.create({
   }
 });
 export default OrderDetailsScreen;
+
+
+
+
+
+
+
+ // const printRecpit = async QRCODE => {
+  //   const results = await RNHTMLtoPDF.convert({
+  //     // html: pdfData,
+  //     html: `<!DOCTYPE html>
+  //     <html>
+  //     <head>
+  //     <style>
+  //       body {
+  //         font-family: Arial, sans-serif;
+  //       }
+  //       .receipt {
+  //         max-width: 300px;
+  //         margin: 0 auto;
+  //         padding: 20px;
+  //         border: 1px solid #ccc;
+  //         border-radius: 5px;
+  //         background-color: #fff;
+  //       }
+  //       .header {
+  //         text-align: center;
+  //         margin-bottom: 10px;
+  //       }
+  //       .restaurant-info {
+  //         margin-bottom: 10px;
+  //         text-align: center;
+  //       }
+  //       .restaurant-logo {
+  //         max-width: 100px;
+  //         height: auto;
+  //       }
+  //       .customer-info {
+  //         margin-top: 20px;
+  //       }
+  //       .info-label {
+  //         font-weight: bold;
+  //       }
+  //       .item {
+  //         display: flex;
+  //         justify-content: space-between;
+  //         margin-bottom: 5px;
+  //       }
+  //       .item-name {
+  //         flex: 1;
+  //       }
+  //       .item-quantity {
+  //         flex: .1;
+  //       }
+  //       .item-price {
+  //         flex-shrink: 0;
+  //       }
+  //       .total {
+  //         text-align: right;
+  //         margin-top: 10px;
+  //         font-weight: bold;
+  //       }
+  //     </style>
+  //     <script ></script>
+  //     </head>
+  //     <body>
+
+  //     <div class="print"
+  //     style="border:1px solid #a1a1a1; width: 82mm; background: white;padding: 10px; margin: 0 auto; text-align: center;">
+  //     <div class="top_header" style="display: flex;">
+  //         <!-- yahan image ka url dal dioo shahboo -->
+  //         <img src="https://xn--pizzablitzstringen-m3b.de/pizza_blitz/admin_panel/images/logo.png" style="width: 38%">
+  //         <h3 style="font-size: 17px;font-family: sans-serif;margin: 54px 0 0 -20px">pizzablitzöstringen.de</h3>
+  //     </div>
+  //     <div class="middle-header">
+  //         <h3 style="font-size: 15px;font-weight: 800;font-family: math;margin: 7px 0 0 0;">Kuhngasse 1, 76684
+  //             Östringen</h3>
+  //         <h3 style="    font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Östringen,
+  //             Tell:0725326560-61</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">
+  //             Befehl no: ${order?.id}</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+  //           order?.created_at
+  //         }</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Phone: +4917682540212</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Email:
+  //             Jonas.bender.1@web.de</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Address:</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Name: ${
+  //           order?.Shipping_address
+  //         }</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+  //           order?.Shipping_address_2
+  //         } ${order?.Shipping_city}</h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+  //           order?.Shipping_postal_code
+  //         } </h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+  //           order?.Shipping_area
+  //         } </h3>
+  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+  //           order?.addtional_notes
+  //         }
+  //         </h3>
+  //         <div>
+  //             <h1 style="font-size: 16px;font-weight: 700;font-family: sans-serif;    margin: 10px 0 0 0;">
+  //                 Befehl Einzelheiten*</h1>
+  //             <div class="Details">
+  //                 <table style="width: 100%">
+  //                     <thead>
+  //                         <tr>
+  //                             <th style="text-align: left; font-family: sans-serif;">Qty</th>
+  //                             <th style="width: 80%;text-align: left; font-family: sans-serif;">Menge</th>
+  //                             <th style="text-align: left; font-family: sans-serif;">Preis</th>
+  //                         </tr>
+  //                     </thead>
+  //                     <tbody style="font-size: 12px;">
+  //                         ${order.order_details?.product.map(product => {
+  //                           const qty = product.qty;
+  //                           const name = product.product_details.name;
+  //                           const discountedPrice =
+  //                             product.price * (product.discount_percent / 100);
+  //                           const dressing = JSON.parse(product.dressing);
+
+  //                           return `<tr>
+  //                             <td style="text-align: left;">${qty}</td>
+  //                             <td style="text-align: left; width: 80%; font-weight: 500;font-family: sans-serif;">
+  //                                 <b>${name}</b> - <br>
+
+  //                                 ${dressing.map(
+  //                                   item =>
+  //                                     ` <span>
+  //                                     ${item.dressing_title}
+  //                                     <br>
+  //                                 </span>`,
+  //                                 )}
+
+  //                             </td>
+  //                             <td style="text-align: left;"><b>€${discountedPrice}<b></td>
+  //                         </tr>`;
+  //                         })}
+  //                     </tbody>
+  //                 </table>
+  //             </div>
+  //         </div>
+
+  //         <div class="footer">
+  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+  //                 <li style="width: 50%;text-align: left;">Zwischensumme:</li>
+  //                 <li style="width: 50%;text-align: right;">€${Number(
+  //                   order?.order_total_price - order?.Shipping_Cost,
+  //                 ).toFixed(2)}</li>
+  //             </ul>
+  //         </div>
+  //         <div class="footer">
+  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+  //                 <li style="width: 50%;text-align: left;">Lieferladegeräte:</li>
+  //                 <li style="width: 50%;text-align: right;">€${Number(
+  //                   order?.Shipping_Cost,
+  //                 ).toFixed(2)}</li>
+  //             </ul>
+  //         </div>
+  //         <div class="footer">
+  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+  //                 <li style="width: 50%;text-align: left;">Gesamt:</li>
+  //                 <li style="width: 50%;text-align: right;">€${Number(
+  //                   order?.order_total_price,
+  //                 ).toFixed(2)}</li>
+  //             </ul>
+  //         </div>
+
+  //         <div class="footer">
+  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+  //                 <li style="width: 50%;text-align: left;">Bezahlverfahren:</li>
+  //                 <li style="width: 50%;text-align: right;">${
+  //                   order?.payment_type
+  //                 }</li>
+  //             </ul>
+  //         </div>
+  //         <div class="footer">
+  //             <p style="margin: 10px 0 10px 0; padding: 45px; font-weight: 700;font-family: sans-serif;">Danke für
+  //                 Ihren Einkauf*</p>
+  //         </div>
+
+  //         <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center; height: 200px" margin-top:20px>
+  //         <Img
+  //         src="${QRCodeUrl}/${QRCODE}"
+  //         /></div>
+  //     </div>
+  // </div>
+  //     </body>
+  //     </html>`,
+
+  //     fileName: `Recipt_${Math.floor(Math.random() * 10000)}`,
+  //     base64: true,
+  //     // height:2000,
+  //     // width:100,
+  //   });
+
+  //   await RNPrint.print({filePath: results.filePath});
+  //   setLoading(false);
+  // };
+
+
+
+
+///////////////////////////////////////////////
+
+   // const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+
+      // if (!bondedDevices || bondedDevices?.length === 0) {
+      //   Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+    
+      //   if (Platform.OS === 'android') {
+      //    RNBluetoothClassic.openBluetoothSettings()
+      //   } else {
+      //      RNBluetoothClassic.openBluetoothSettings()
+      //   }
+    
+      //   return false;
+      // }
+    
+      // if (bondedDevices?.length > 1) {
+      //   Toast.show(
+      //     'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
+      //     Toast.LONG
+      //   );
+    
+      //   if (Platform.OS === 'android') {
+      //    RNBluetoothClassic.openBluetoothSettings()
+      //   } else {
+      //      RNBluetoothClassic.openBluetoothSettings()
+      //   }
+    
+      //   return false;
+      // }
+    
+
+      // const selectedPrinter = devices[0];
+
+      // // Optional: You may validate the printer name prefix
+      // if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
+      //   Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
+      //   return;
+      // }
+
+      // // Set selected MAC address and proceed with print
+      // setSelectedMac(selectedPrinter.macAddress);
