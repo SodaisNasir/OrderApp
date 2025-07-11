@@ -19,10 +19,10 @@ const LoginScreen  = () => {
     handleSubmit,
     formState: { errors },
   } = useForm({ mode: 'all' ,defaultValues:{
-    email: 'mateen737@gmail.com',
-    password: '12345678'
-    // email: 'foodola@gmail.com',
-    // password: 'admin1234'
+    // email: 'mateen737@gmail.com',
+    // password: '12345678'
+    email: 'foodola@gmail.com',
+    password: 'admin1234'
   }});
 
 

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import NewButton from '../NewButton';
 import {Colors} from '../../../important/Colors';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
@@ -14,13 +14,11 @@ import Toast from 'react-native-simple-toast';
 import {PoppinsFont} from '../../Constants/fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BluetoothModal = ({
-  modalVisible,
-  setModalVisible,
-  allPairDevices,
-  setSelectedMac,
-}) => {
+const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac}) => {
   const [loader, setLoader] = useState(false);
+  const [allPairDevices, setAllPairDevices] = useState([]);
+
+  // console.log('allPairDevices', allPairDevices)
 
   const buttonCancell = {
     borderColor: Colors.primary,
@@ -39,8 +37,18 @@ const BluetoothModal = ({
     setLoader(false);
   };
 
+  useEffect(() => {
+    handlePrinterCheck();
+  }, []);
+
+  const handlePrinterCheck = async () => {
+    const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+    setAllPairDevices(bondedDevices);
+  };
+
   const handlePrinterSelect = async item => {
     try {
+      console.log('item?.address', item?.address)
       setSelectedMac(item?.address);
       await AsyncStorage.setItem('selectedPrinterMac', item?.address); // ⬅️ Save to AsyncStorage
       setModalVisible(false);
@@ -56,7 +64,7 @@ const BluetoothModal = ({
       transparent={true}
       statusBarTranslucent
       visible={modalVisible}
-       onRequestClose={() => setModalVisible(false)} // Android back button
+      onRequestClose={() => setModalVisible(false)} // Android back button
       style={{
         flex: 1,
         margin: 0,

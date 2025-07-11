@@ -29,6 +29,7 @@ import ThermalPrinter from 'react-native-thermal-printer';
 import { PoppinsFont } from '../../Constants/fonts';
 import Toast from 'react-native-simple-toast';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import BluetoothModal from '../../Components/Modal/BluetoothModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OrderDetailsScreen = ({ navigation, route }) => {
@@ -37,6 +38,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [time, setTime] = useState(30);
   const [devices, setDevices] = useState([]);
   const [selectedMac, setSelectedMac] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const order = route.params.order;
   const accountType = route.params.type;
   const [pdfData, setpdfData] = useState(null);
@@ -52,20 +54,6 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         ]);
       }
   }, [])
-
-  useEffect(() => {
-    const loadSavedPrinter = async () => {
-      try {
-        const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
-        if (savedMac) {
-          setSelectedMac(savedMac);
-        }
-      } catch (e) {
-        console.error('Failed to load selected printer:', e);
-      }
-    };
-    loadSavedPrinter();
-  }, []);
   
 
   useFocusEffect(
@@ -75,21 +63,23 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         ?.setOptions({ tabBarStyle: { display: 'none' }, swipeEnabled: false });
       getPDFData(setpdfData, order?.id);
    
-      const fetchDevices = async () => {
-        try {
-          const list = await ThermalPrinter.getBluetoothDeviceList();
-          console.log('Devices:', list);
-          setDevices(list);
-          if (list.length > 0) setSelectedMac(list[0].macAddress);
-        } catch (err) {
-          console.log('Error getting devices', err);
-        }
-      };
-
       fetchDevices();
     }, []),
   );
-
+  
+  const fetchDevices = async () => {
+ try {
+   const list = await ThermalPrinter.getBluetoothDeviceList();
+   console.log('Devices:', list);
+   setDevices(list);
+   if (list.length > 0) {
+     console.log('first');
+     // setSelectedMac(list[0].macAddress);
+   }
+ } catch (err) {
+   console.log('Error getting devices', err);
+ }
+};
   const dispatch = useDispatch();
 
   const onConfirm = async (elmnt) => {
@@ -134,18 +124,48 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         return false;
       }
 
-       if (!selectedMac) {
-            // Try to load from storage again (edge case)
-            const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
-            if (savedMac) {
-              setSelectedMac(savedMac);
-            } else {
-              setModalVisible(true); // Still not found
-              return;
-            }
-          }
+      const bondedDevices = await RNBluetoothClassic.getBondedDevices();
 
-     
+      if (!bondedDevices || bondedDevices?.length === 0) {
+        Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
+    
+        if (Platform.OS === 'android') {
+         RNBluetoothClassic.openBluetoothSettings()
+        } else {
+           RNBluetoothClassic.openBluetoothSettings()
+        }
+    
+        return false;
+      }
+     const SelectedPrinter =  await AsyncStorage.getItem('selectedPrinterMac')
+    console.log('SelectedPrinter', SelectedPrinter)
+      if (!SelectedPrinter) {
+        Toast.show(
+          'Please Select Printer',
+          Toast.LONG
+        );
+        setModalVisible(true)
+        // if (Platform.OS === 'android') {
+        //  RNBluetoothClassic.openBluetoothSettings()
+        // } else {
+        //    RNBluetoothClassic.openBluetoothSettings()
+        // }
+    
+        return false;
+      }
+    
+
+      const selectedPrinter = devices[0];
+
+      // Optional: You may validate the printer name prefix
+      // if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
+      //   Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
+      //   return;
+      // }
+
+      // Set selected MAC address and proceed with print
+      // setSelectedMac(selectedPrinter.macAddress);
+
     } catch (error) {
       console.log('Bluetooth error:', error);
       Toast.show('Bluetooth error. Make sure a printer is paired and connected.', Toast.LONG);
@@ -1115,6 +1135,11 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           }
         </View>
       </View>
+      <BluetoothModal
+        setSelectedMac={setSelectedMac}
+        modalVisible={modalVisible}
+        setModalVisible={setModalVisible}
+      />
     </>
   );
 };
@@ -1377,49 +1402,3 @@ export default OrderDetailsScreen;
   //   await RNPrint.print({filePath: results.filePath});
   //   setLoading(false);
   // };
-
-
-
-
-///////////////////////////////////////////////
-
-   // const bondedDevices = await RNBluetoothClassic.getBondedDevices();
-
-      // if (!bondedDevices || bondedDevices?.length === 0) {
-      //   Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
-    
-      //   if (Platform.OS === 'android') {
-      //    RNBluetoothClassic.openBluetoothSettings()
-      //   } else {
-      //      RNBluetoothClassic.openBluetoothSettings()
-      //   }
-    
-      //   return false;
-      // }
-    
-      // if (bondedDevices?.length > 1) {
-      //   Toast.show(
-      //     'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
-      //     Toast.LONG
-      //   );
-    
-      //   if (Platform.OS === 'android') {
-      //    RNBluetoothClassic.openBluetoothSettings()
-      //   } else {
-      //      RNBluetoothClassic.openBluetoothSettings()
-      //   }
-    
-      //   return false;
-      // }
-    
-
-      // const selectedPrinter = devices[0];
-
-      // // Optional: You may validate the printer name prefix
-      // if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
-      //   Toast.show('Paired device is not recognized as a printer.', Toast.SHORT);
-      //   return;
-      // }
-
-      // // Set selected MAC address and proceed with print
-      // setSelectedMac(selectedPrinter.macAddress);

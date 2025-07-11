@@ -41,7 +41,7 @@ import {BluetoothEscposPrinter} from 'react-native-thermal-receipt-printer';
 // });
 
 const NewOrdersScreen = ({navigation}) => {
- const dispatch = useDispatch();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
   const [devices, setDevices] = useState([]);
@@ -50,6 +50,9 @@ const NewOrdersScreen = ({navigation}) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [isPrintingEnabled, setIsPrintingEnabled] = useState(false);
   const [allPairDevices, setAllPairDevices] = useState([]);
+  const [time, setTime] = useState(30);
+
+  console.log('selectedMac', selectedMac)
 
   const user = useSelector(state => state.auth?.userDetails);
   const orders = useSelector(state => state.auth?.newOrders);
@@ -108,11 +111,19 @@ const NewOrdersScreen = ({navigation}) => {
     };
   }, []);
 
+  const incrtement = () => {
+    setTime(prev => prev + 10);
+  };
+  const decrement = () => {
+    if (time > 0) {
+      setTime(prev => prev - 10);
+    }
+  };
+
   const handlePrinterCheck = async () => {
     const bondedDevices = await RNBluetoothClassic.getBondedDevices();
     setAllPairDevices(bondedDevices);
   };
-  handlePrinterCheck();
 
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
@@ -129,54 +140,57 @@ const NewOrdersScreen = ({navigation}) => {
         dispatch(getOrders('neworder'));
       }
       setIsRefreshing(false);
-
-      const fetchDevices = async () => {
-        try {
-          const list = await ThermalPrinter.getBluetoothDeviceList();
-          console.log('Devices:', list);
-          setDevices(list);
-          if (list.length > 0) setSelectedMac(list[0].macAddress);
-        } catch (err) {
-          console.log('Error getting devices', err);
-        }
-      };
-
       fetchDevices();
     }, []),
   );
+
+  const fetchDevices = async () => {
+    try {
+      const list = await ThermalPrinter.getBluetoothDeviceList();
+      console.log('Devices:', list);
+      setDevices(list);
+      if (list.length > 0) {
+        console.log('first');
+        // setSelectedMac(list[0].macAddress);
+      }
+    } catch (err) {
+      console.log('Error getting devices', err);
+    }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
 
     if (user?.role_id == 2) {
-      await dispatch(getRiderDeliveries(user.id));
+      dispatch(getRiderDeliveries(user.id));
     } else {
-      await dispatch(getOrders('neworder'));
+      dispatch(getOrders('neworder'));
     }
 
     setIsRefreshing(false);
   };
 
   async function requestBluetoothPermissions() {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        ]);
-    
-        const allGranted = Object.values(granted).every((p) => p === PermissionsAndroid.RESULTS.GRANTED);
-        console.log('allGranted', allGranted)
-        return allGranted;
-      }
-    
-      return true;
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      ]);
+
+      const allGranted = Object.values(granted).every(
+        p => p === PermissionsAndroid.RESULTS.GRANTED,
+      );
+      console.log('allGranted', allGranted);
+      return allGranted;
     }
 
+    return true;
+  }
+
   useEffect(() => {
- requestBluetoothPermissions()
+    requestBluetoothPermissions();
   }, []);
-  
 
   // useEffect(() => {
   //   const loadSavedPrinter = async () => {
@@ -273,9 +287,9 @@ const NewOrdersScreen = ({navigation}) => {
     return () => clearInterval(interval);
   }, [orders, isPrintingEnabled]);
 
- const autoPrintOrder = async order => {
-  try {
-    const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
+  const autoPrintOrder = async order => {
+    try {
+      const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
 
       if (!connectedPrinter) {
         Toast.show('Bluetooth is currently disabled', Toast.SHORT);
@@ -286,32 +300,34 @@ const NewOrdersScreen = ({navigation}) => {
       const bondedDevices = await RNBluetoothClassic.getBondedDevices();
 
       if (!bondedDevices || bondedDevices?.length === 0) {
-        Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
-    
-        if (Platform.OS === 'android') {
-         RNBluetoothClassic.openBluetoothSettings()
-        } else {
-           RNBluetoothClassic.openBluetoothSettings()
-        }
-    
-        return false;
-      }
-    
-      if (bondedDevices?.length > 1) {
         Toast.show(
-          'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
-          Toast.LONG
+          'No paired Bluetooth printer found. Please pair one.',
+          Toast.SHORT,
         );
-    
+
         if (Platform.OS === 'android') {
-         RNBluetoothClassic.openBluetoothSettings()
+          RNBluetoothClassic.openBluetoothSettings();
         } else {
-           RNBluetoothClassic.openBluetoothSettings()
+          RNBluetoothClassic.openBluetoothSettings();
         }
-    
+
         return false;
       }
-    
+
+      // if (bondedDevices?.length > 1) {
+      //   Toast.show(
+      //     'Multiple Bluetooth devices found. Please unpair others to avoid conflict.',
+      //     Toast.LONG,
+      //   );
+
+      //   if (Platform.OS === 'android') {
+      //     RNBluetoothClassic.openBluetoothSettings();
+      //   } else {
+      //     RNBluetoothClassic.openBluetoothSettings();
+      //   }
+
+      //   return false;
+      // }
 
       const selectedPrinter = devices[0];
 
@@ -322,50 +338,49 @@ const NewOrdersScreen = ({navigation}) => {
       // }
 
       // Set selected MAC address and proceed with print
-      setSelectedMac(selectedPrinter.macAddress);
+      console.log('third');
+      // setSelectedMac(selectedPrinter.macAddress);
 
-    const status = order.status === 'neworder' ? 'pending' : order.status;
+      const status = order.status === 'neworder' ? 'pending' : order.status;
 
-    dispatch(
-      updateOrderStatus(
-        status,
-        order.id,
-        printReceipt,
-        // async () => {
-        //   console.log('[AutoPrint] Status updated, starting print...');
-        //   const result = await printReceipt(order);
-        //   if (result?.success) {
-        //     console.log('[AutoPrint] Print successful');
-        //     printedOrderIdsRef.current.push(order.id);
-        //     Toast.show('Order printed successfully.', Toast.SHORT);
-        //   } else {
-        //     console.warn('[AutoPrint] Print failed');
-        //     Toast.show('Failed to print order.', Toast.SHORT);
-        //     if (!failedOrderIdsRef.current.includes(order.id)) {
-        //       failedOrderIdsRef.current.push(order.id);
-        //     }
-        //   }
-        // },
-        setLoading,
-        order
-      ),
-    );
-  } catch (error) {
-    console.log('[AutoPrint] Error during printing:', error?.message);
+      dispatch(
+        updateOrderStatus(
+          status,
+          order.id,
+          printReceipt,
+          // async () => {
+          //   console.log('[AutoPrint] Status updated, starting print...');
+          //   const result = await printReceipt(order);
+          //   if (result?.success) {
+          //     console.log('[AutoPrint] Print successful');
+          //     printedOrderIdsRef.current.push(order.id);
+          //     Toast.show('Order printed successfully.', Toast.SHORT);
+          //   } else {
+          //     console.warn('[AutoPrint] Print failed');
+          //     Toast.show('Failed to print order.', Toast.SHORT);
+          //     if (!failedOrderIdsRef.current.includes(order.id)) {
+          //       failedOrderIdsRef.current.push(order.id);
+          //     }
+          //   }
+          // },
+          setLoading,
+          order,
+        ),
+      );
+    } catch (error) {
+      console.log('[AutoPrint] Error during printing:', error?.message);
 
-    if (!failedOrderIdsRef.current.includes(order.id)) {
-      failedOrderIdsRef.current.push(order.id);
+      if (!failedOrderIdsRef.current.includes(order.id)) {
+        failedOrderIdsRef.current.push(order.id);
+      }
+
+      if (error?.message === 'User did not enable Bluetooth') {
+        setModalVisible(true);
+      } else {
+        Toast.show(`Print error: ${error.message}`, Toast.SHORT);
+      }
     }
-
-    if (error?.message === 'User did not enable Bluetooth') {
-      setModalVisible(true);
-    } else {
-      Toast.show(`Print error: ${error.message}`, Toast.SHORT);
-    }
-  }
-};
-
-
+  };
 
   const printReceipt = async order => {
     const items = order.order_details?.product?.map(product => ({
@@ -578,60 +593,61 @@ const NewOrdersScreen = ({navigation}) => {
     receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
     receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
 
- try {
-//   setLoading(true);
-//   setLoading2(true);
+    try {
+      //   setLoading(true);
+      //   setLoading2(true);
 
-//   const bondedDevices = await RNBluetoothClassic.getBondedDevices();
-//   const selectedDevice = bondedDevices.find(d => d.address === selectedMac);
+      //   const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+      //   const selectedDevice = bondedDevices.find(d => d.address === selectedMac);
 
-//   if (!selectedDevice) {
-//     throw new Error(`Device with MAC ${selectedMac} not found among bonded devices.`);
-//   }
+      //   if (!selectedDevice) {
+      //     throw new Error(`Device with MAC ${selectedMac} not found among bonded devices.`);
+      //   }
 
-//   const isConnected = await RNBluetoothClassic.isDeviceConnected(selectedMac);
-// await BluetoothEscposPrinter.connectPrinter(selectedMac);
+      //   const isConnected = await RNBluetoothClassic.isDeviceConnected(selectedMac);
+      // await BluetoothEscposPrinter.connectPrinter(selectedMac);
 
-//   if (!isConnected) {
-//     console.log('Connecting to device...');
-//     await RNBluetoothClassic.connectToDevice(selectedMac);
-//   }
+      //   if (!isConnected) {
+      //     console.log('Connecting to device...');
+      //     await RNBluetoothClassic.connectToDevice(selectedMac);
+      //   }
 
-//   console.log('Sending print data...');
-  // await RNBluetoothClassic.writeToDevice(selectedMac, receiptText);
-//   await BluetoothEscposPrinter.printText(receiptText, {
-//   encoding: 'GBK',
-//   codepage: 0,
-//   widthtimes: 0,
-//   heigthtimes: 0,
-//   fonttype: 1,
-// });
+      //   console.log('Sending print data...');
+      // await RNBluetoothClassic.writeToDevice(selectedMac, receiptText);
+      //   await BluetoothEscposPrinter.printText(receiptText, {
+      //   encoding: 'GBK',
+      //   codepage: 0,
+      //   widthtimes: 0,
+      //   heigthtimes: 0,
+      //   fonttype: 1,
+      // });
 
- const result = await ThermalPrinter.printBluetooth({
-    payload: receiptText,
-    macAddress: selectedMac, // make sure it's trimmed
-    printerWidthMM: 80,
-    printerNbrCharactersPerLine: 48,
-    autoCut: true,
-    openCashbox: false, // optional
-    mmFeedPaper: 10, // optional
-    printerDpi: 203, // optional, default is usually 203
-  });
+      console.log('selectedMac', selectedMac);
 
-  console.log('Printed successfully!', result);
-} catch (err) {
-  console.log('Failed to print:', JSON.stringify(err, null, 2));
-} finally {
-  setLoading(false);
-  setLoading2(false);
-}
+      const result = await ThermalPrinter.printBluetooth({
+        payload: receiptText,
+        macAddress: selectedMac, // make sure it's trimmed
+        printerWidthMM: 80,
+        printerNbrCharactersPerLine: 48,
+        autoCut: true,
+        // openCashbox: false, // optional
+        // mmFeedPaper: 10, // optional
+        // printerDpi: 203, // optional, default is usually 203
+      });
 
-
+      console.log('Printed successfully!', result);
+    } catch (err) {
+      console.log('Failed to print:', JSON.stringify(err, null, 2));
+    } finally {
+      setLoading(false);
+      setLoading2(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       {/* <CustomButton title="Click" onPress={printReceipt} /> */}
+
       <FlatList
         style={{flex: 1, marginTop: verticalScale(10)}}
         data={orders}
@@ -675,30 +691,82 @@ const NewOrdersScreen = ({navigation}) => {
         }
       />
       <View style={styles.print_button}>
-      <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
-        <Text style={{color: isPrintingEnabled ? Colors.buttongrad2 : Colors.white}}>
-          {selectedMac ? selectedMac : 'No Printer Selected'}
-        </Text>
-        <Feather
-          name={'printer'}
-          size={20}
-          color={isPrintingEnabled ? Colors.buttongrad2 : Colors.white}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.down}>
-        <Text style={{color: Colors.white}}>
-          Change Printer
-        </Text>
-        <Feather
-          name={'printer'}
-          size={20}
-          color={Colors.white}
-        />
-      </TouchableOpacity>
+        <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
+          <Text
+            style={{
+              color: isPrintingEnabled ? Colors.buttongrad2 : Colors.white,
+            }}>
+            {selectedMac ? selectedMac : 'No Printer Selected'}
+          </Text>
+          <Feather
+            name={'printer'}
+            size={20}
+            color={isPrintingEnabled ? Colors.buttongrad2 : Colors.white}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={styles.down}>
+          <Text style={{color: Colors.white}}>Change Printer</Text>
+          <Feather name={'printer'} size={20} color={Colors.white} />
+        </TouchableOpacity>
+        <View
+          style={{
+            flex: 0.3,
+            backgroundColor: Colors.backgroundColor,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: scale(10),
+          }}>
+          <View style={{marginBottom: 10,}}>
+            <Text style={{color: Colors.grey}}>
+              Time To Deliver / Prepare (Minutes)
+            </Text>
+          </View>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+            <TouchableOpacity
+              style={{
+                borderWidth: scale(1),
+                height: scale(40),
+                width: scale(40),
+                borderRadius: 10,
+                borderColor: '#D1D5DB',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onPress={decrement}>
+              <Text style={{fontSize: scale(25)}}>-</Text>
+            </TouchableOpacity>
+            <View
+              style={{
+                borderWidth: scale(1),
+                height: scale(40),
+                width: scale(60),
+                borderRadius: 10,
+                borderColor: '#D1D5DB',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text>{time}</Text>
+            </View>
+            <TouchableOpacity
+              style={{
+                borderWidth: scale(1),
+                height: scale(40),
+                width: scale(40),
+                borderRadius: 10,
+                borderColor: '#D1D5DB',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onPress={incrtement}>
+              <Text style={{fontSize: scale(20)}}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
       <BluetoothModal
         setSelectedMac={setSelectedMac}
-        allPairDevices={allPairDevices}
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
       />
@@ -737,12 +805,12 @@ const styles = StyleSheet.create({
     color: Colors.iconBackground,
   },
 
-  print_button:{
+  print_button: {
     position: 'absolute',
     zIndex: 99,
     right: 20,
     bottom: 20,
-    gap: 10
+    gap: 10,
   },
   up: {
     paddingVertical: 10,
