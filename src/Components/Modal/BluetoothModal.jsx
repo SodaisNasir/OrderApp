@@ -37,10 +37,7 @@ const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac}) => {
     setLoader(false);
   };
 
-  useEffect(() => {
-    handlePrinterCheck();
-  }, []);
-
+  
   const handlePrinterCheck = async () => {
     const bondedDevices = await RNBluetoothClassic.getBondedDevices();
     setAllPairDevices(bondedDevices);
@@ -58,6 +55,9 @@ const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac}) => {
       Toast.show('Failed to save selected printer', Toast.SHORT);
     }
   };
+  useEffect(() => {
+    handlePrinterCheck();
+  }, []);
   return (
     <Modal
       animationType="slide"

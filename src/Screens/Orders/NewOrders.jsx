@@ -634,6 +634,7 @@ const NewOrdersScreen = ({navigation}) => {
         // mmFeedPaper: 10, // optional
         // printerDpi: 203, // optional, default is usually 203
       });
+      Toast.show('Your Order has been printed successfully.',Toast.SHORT,);
 
       console.log('Printed successfully!', result);
     } catch (err) {
