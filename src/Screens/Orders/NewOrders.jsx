@@ -1,7 +1,6 @@
 import {useFocusEffect} from '@react-navigation/native';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
-  Alert,
   FlatList,
   PermissionsAndroid,
   Platform,
@@ -193,21 +192,20 @@ const NewOrdersScreen = ({navigation}) => {
     requestBluetoothPermissions();
   }, []);
 
-  useEffect(() => {
-    const loadSavedPrinter = async () => {
-      try {
-        const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
-
-        if (savedMac) {
-          await RNBluetoothClassic.connectToDevice(savedMac);
-          setSelectedMac(savedMac);
-        }
-      } catch (e) {
-        console.log('Failed to load selected printer:', e);
-      }
-    };
-    loadSavedPrinter();
-  }, []);
+  // useEffect(() => {
+  //   const loadSavedPrinter = async () => {
+  //     try {
+  //       const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
+  //       console.log('saveMac', savedMac)
+  //       if (savedMac) {
+  //         setSelectedMac(savedMac);
+  //       }
+  //     } catch (e) {
+  //       console.log('Failed to load selected printer:', e);
+  //     }
+  //   };
+  //   loadSavedPrinter();
+  // }, []);
 
   const handleTogglePrint = async () => {
     setIsPrintingEnabled(prev => {
@@ -223,6 +221,18 @@ const NewOrdersScreen = ({navigation}) => {
             setModalVisible(true);
             return;
           }
+
+          // if (!selectedMac) {
+          //   // Try to load from storage again (edge case)
+          //   const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
+          //   if (savedMac) {
+          //     setSelectedMac(savedMac);
+          //   } else {
+          //     setModalVisible(true); // Still not found
+          //     return;
+          //   }
+          // }
+
           const unprintedOrders = orders?.filter(
             o =>
               !printedOrderIdsRef.current.includes(o.id) &&
@@ -319,7 +329,7 @@ const NewOrdersScreen = ({navigation}) => {
       //   return false;
       // }
 
-      // const selectedPrinter = devices[0];
+      const selectedPrinter = devices[0];
 
       // Optional: You may validate the printer name prefix
       // if (!selectedPrinter.deviceName?.toLowerCase().includes('mtp') && !selectedPrinter.deviceName?.toLowerCase().includes('printer')) {
@@ -338,6 +348,21 @@ const NewOrdersScreen = ({navigation}) => {
           status,
           order.id,
           printReceipt,
+          // async () => {
+          //   console.log('[AutoPrint] Status updated, starting print...');
+          //   const result = await printReceipt(order);
+          //   if (result?.success) {
+          //     console.log('[AutoPrint] Print successful');
+          //     printedOrderIdsRef.current.push(order.id);
+          //     Toast.show('Order printed successfully.', Toast.SHORT);
+          //   } else {
+          //     console.warn('[AutoPrint] Print failed');
+          //     Toast.show('Failed to print order.', Toast.SHORT);
+          //     if (!failedOrderIdsRef.current.includes(order.id)) {
+          //       failedOrderIdsRef.current.push(order.id);
+          //     }
+          //   }
+          // },
           setLoading,
           order,
         ),
@@ -569,11 +594,36 @@ const NewOrdersScreen = ({navigation}) => {
     receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
 
     try {
+      //   setLoading(true);
+      //   setLoading2(true);
 
-      // const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-      // await RNBluetoothClassic.connectToDevice(selectedMac);
-      // console.log('auto selectedMac', selectedMac);
-      // await delay(3000);
+      //   const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+      //   const selectedDevice = bondedDevices.find(d => d.address === selectedMac);
+
+      //   if (!selectedDevice) {
+      //     throw new Error(`Device with MAC ${selectedMac} not found among bonded devices.`);
+      //   }
+
+      //   const isConnected = await RNBluetoothClassic.isDeviceConnected(selectedMac);
+      // await BluetoothEscposPrinter.connectPrinter(selectedMac);
+
+      //   if (!isConnected) {
+      //     console.log('Connecting to device...');
+      //     await RNBluetoothClassic.connectToDevice(selectedMac);
+      //   }
+
+      //   console.log('Sending print data...');
+      // await RNBluetoothClassic.writeToDevice(selectedMac, receiptText);
+      //   await BluetoothEscposPrinter.printText(receiptText, {
+      //   encoding: 'GBK',
+      //   codepage: 0,
+      //   widthtimes: 0,
+      //   heigthtimes: 0,
+      //   fonttype: 1,
+      // });
+
+      console.log('selectedMac', selectedMac);
+
       const result = await ThermalPrinter.printBluetooth({
         payload: receiptText,
         macAddress: selectedMac, // make sure it's trimmed
@@ -584,10 +634,10 @@ const NewOrdersScreen = ({navigation}) => {
         // mmFeedPaper: 10, // optional
         // printerDpi: 203, // optional, default is usually 203
       });
-      // Alert.alert('Printed successfully!');
+      Toast.show('Your Order has been printed successfully.',Toast.SHORT,);
+
       console.log('Printed successfully!', result);
     } catch (err) {
-      // Alert.alert('Failed to print:');
       console.log('Failed to print:', JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
@@ -641,8 +691,8 @@ const NewOrdersScreen = ({navigation}) => {
           </View>
         }
       />
-      <View style={styles.print_button} >
-    {selectedMac &&    <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
+      <View style={styles.print_button}>
+        <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
           <Text
             style={{
               color: isPrintingEnabled ? Colors.buttongrad2 : Colors.white,
@@ -654,7 +704,7 @@ const NewOrdersScreen = ({navigation}) => {
             size={20}
             color={isPrintingEnabled ? Colors.buttongrad2 : Colors.white}
           />
-        </TouchableOpacity>}
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.down}>
