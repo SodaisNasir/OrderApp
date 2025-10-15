@@ -13,41 +13,49 @@ import RNBluetoothClassic from 'react-native-bluetooth-classic';
 import Toast from 'react-native-simple-toast';
 import {PoppinsFont} from '../../Constants/fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ThermalPrinter from 'react-native-thermal-printer';
 
-const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac}) => {
+const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac,setLoraLoader}) => {
   const [loader, setLoader] = useState(false);
   const [allPairDevices, setAllPairDevices] = useState([]);
 
   // console.log('allPairDevices', allPairDevices)
 
-  const buttonCancell = {
-    borderColor: Colors.primary,
-    borderWidth: 1,
-  };
+  // const buttonCancell = {
+  //   borderColor: Colors.primary,
+  //   borderWidth: 1,
+  // };
 
-  const handleOpenSetting = async () => {
-    setLoader(true);
-    try {
-      await RNBluetoothClassic.openBluetoothSettings();
-      setModalVisible(false);
-    } catch (error) {
-      console.log('error', error);
-      Toast.show('Something went Wrong', Toast.SHORT);
-    }
-    setLoader(false);
-  };
+  // const handleOpenSetting = async () => {
+  //   setLoader(true);
+  //   try {
+  //     await RNBluetoothClassic.openBluetoothSettings();
+  //     setModalVisible(false);
+  //   } catch (error) {
+  //     console.log('error', error);
+  //     Toast.show('Something went Wrong', Toast.SHORT);
+  //   }
+  //   setLoader(false);
+  // };
 
-  useEffect(() => {
-    handlePrinterCheck();
-  }, []);
+
 
   const handlePrinterCheck = async () => {
+    const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
+  if (!connectedPrinter) {
+    Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+    await RNBluetoothClassic.requestBluetoothEnabled();
+    setModalVisible(true);
+    return;
+  }
     const bondedDevices = await RNBluetoothClassic.getBondedDevices();
     setAllPairDevices(bondedDevices);
   };
 
   const handlePrinterSelect = async item => {
     try {
+
+      await RNBluetoothClassic.connectToDevice(item?.address);
       console.log('item?.address', item?.address)
       setSelectedMac(item?.address);
       await AsyncStorage.setItem('selectedPrinterMac', item?.address); // ⬅️ Save to AsyncStorage
@@ -56,8 +64,16 @@ const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac}) => {
     } catch (e) {
       console.error('Failed to save selected printer:', e);
       Toast.show('Failed to save selected printer', Toast.SHORT);
+    } finally{
+      setLoraLoader(p => !p)
     }
   };
+
+  useEffect(() => {
+    handlePrinterCheck();
+  }, [modalVisible]);
+
+  
   return (
     <Modal
       animationType="slide"
