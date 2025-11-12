@@ -8,22 +8,24 @@ import CustomButton from '../../Components/CustomButton';
 import { useDispatch } from 'react-redux';
 import { Login } from '../../Redux/Reducers/Actions';
 
-const LoginScreen  = () => {
+const LoginScreen = () => {
 
   const dispatch = useDispatch();
 
-  const [loader,setLoader] = useState(false)
+  const [loader, setLoader] = useState(false)
 
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm({ mode: 'all' ,defaultValues:{
-    // email: 'mateen737@gmail.com',
-    // password: '12345678'
-    email: 'foodola@gmail.com',
-    password: 'admin1234'
-  }});
+  } = useForm({
+    mode: 'all', defaultValues: {
+      // email: 'mateen737@gmail.com',
+      // password: '12345678'
+      email: '',
+      password: ''
+    }
+  });
 
 
   const handleLogin = data => {
@@ -39,7 +41,7 @@ const LoginScreen  = () => {
     //   },
     // };
     // console.log('first',data)
-    dispatch(Login(data,setLoader));
+    dispatch(Login(data, setLoader));
     // dispatch(loginAction);
   };
 

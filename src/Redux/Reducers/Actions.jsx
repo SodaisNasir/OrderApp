@@ -17,12 +17,13 @@ export const Login = (data, setLoader) => {
         body: formdata,
         redirect: 'follow',
       };
+      console.log('data', data)
 
       const response = await fetch(`${apiUrl}login-app`, requestOptions);
-      // console.log('response', response)
+      // console.log('response=========login', response)
       if (response?.ok) {
         const data = await response.json();
-        // console.log('DATA ==>', data);
+        console.log('DATA ==>', data);
         if (data?.error?.status === 400) {
           alert(data?.error?.message);
         } else {
@@ -74,7 +75,7 @@ export const getOrders = (type, setLoader) => {
       };
 
       const response = await fetch(`${apiUrl}get-orders`, requestOptions);
-      console.log('response===========>', response)
+      console.log('response===========> order A rha hai', response)
 
       // console.log('response', response)
       if (response.ok) {
