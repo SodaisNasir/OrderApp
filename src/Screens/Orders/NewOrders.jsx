@@ -1,5 +1,5 @@
-import {useFocusEffect} from '@react-navigation/native';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   PermissionsAndroid,
@@ -10,27 +10,27 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {moderateScale, scale, verticalScale} from 'react-native-size-matters';
-import {useDispatch, useSelector} from 'react-redux';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { useDispatch, useSelector } from 'react-redux';
 import CustomButton from '../../Components/CustomButton';
-import {Colors} from '../../../important/Colors';
+import { Colors } from '../../../important/Colors';
 import {
   getOrders,
   getRiderDeliveries,
   updateOrderStatus,
 } from '../../Redux/Reducers/Actions';
-import {ListComponent} from '../../Components/ListComponent';
+import { ListComponent } from '../../Components/ListComponent';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
 import ThermalPrinter from 'react-native-thermal-printer';
-import {Pusher} from '@pusher/pusher-websocket-react-native';
+import { Pusher } from '@pusher/pusher-websocket-react-native';
 import BluetoothModal from '../../Components/Modal/BluetoothModal';
 import Feather from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Sound from 'react-native-sound';
-import {PoppinsFont} from '../../Constants/fonts';
-import {BluetoothEscposPrinter} from 'react-native-thermal-receipt-printer';
+import { PoppinsFont } from '../../Constants/fonts';
+import { BluetoothEscposPrinter } from 'react-native-thermal-receipt-printer';
 
 // await BluetoothEscposPrinter.printText(receiptText, {
 //   encoding: 'GBK',
@@ -40,7 +40,7 @@ import {BluetoothEscposPrinter} from 'react-native-thermal-receipt-printer';
 //   fonttype: 1,
 // });
 
-const NewOrdersScreen = ({navigation}) => {
+const NewOrdersScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
@@ -106,7 +106,7 @@ const NewOrdersScreen = ({navigation}) => {
     const pusher = Pusher.getInstance();
     connectToPussher(pusher);
     return async () => {
-      await pusher.unsubscribe({channelName: 'orders'});
+      await pusher.unsubscribe({ channelName: 'orders' });
       await pusher.disconnect();
     };
   }, []);
@@ -130,7 +130,7 @@ const NewOrdersScreen = ({navigation}) => {
   useFocusEffect(
     useCallback(() => {
       navigation.getParent()?.setOptions({
-        tabBarStyle: {display: 'flex', backgroundColor: Colors.primary},
+        tabBarStyle: { display: 'flex', backgroundColor: Colors.primary },
         swipeEnabled: true,
       });
       setIsRefreshing(true);
@@ -502,9 +502,8 @@ const NewOrdersScreen = ({navigation}) => {
     receiptText += '------------------------------------------------\n';
 
     orderData.items.forEach((item, idx) => {
-      receiptText += `[L]<b>x${item.qty}     ${
-        item.name
-      } [R]${item.price.toFixed(2)}</b>\n`;
+      receiptText += `[L]<b>x${item.qty}     ${item.name
+        } [R]${item.price.toFixed(2)}</b>\n`;
       receiptText += '[L]\n';
 
       addonData[idx]?.addons?.forEach(addon => {
@@ -634,7 +633,7 @@ const NewOrdersScreen = ({navigation}) => {
         // mmFeedPaper: 10, // optional
         // printerDpi: 203, // optional, default is usually 203
       });
-      Toast.show('Your Order has been printed successfully.',Toast.SHORT,);
+      Toast.show('Your Order has been printed successfully.', Toast.SHORT,);
 
       console.log('Printed successfully!', result);
     } catch (err) {
@@ -650,14 +649,14 @@ const NewOrdersScreen = ({navigation}) => {
       {/* <CustomButton title="Click" onPress={printReceipt} /> */}
 
       <FlatList
-        style={{flex: 1, marginTop: verticalScale(10)}}
+        style={{ flex: 1, marginTop: verticalScale(10) }}
         data={orders}
         keyExtractor={(item, index) => index.toString()}
-        renderItem={({item}) => (
+        renderItem={({ item }) => (
           <ListComponent
             item={item}
             onPress={() =>
-              navigation.navigate('Order Details', {order: item, type})
+              navigation.navigate('Order Details', { order: item, type })
             }
           />
         )}
@@ -708,7 +707,7 @@ const NewOrdersScreen = ({navigation}) => {
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.down}>
-          <Text style={{color: Colors.white}}>Change Printer</Text>
+          <Text style={{ color: Colors.white }}>Change Printer</Text>
           <Feather name={'printer'} size={20} color={Colors.white} />
         </TouchableOpacity>
         <View
@@ -719,12 +718,12 @@ const NewOrdersScreen = ({navigation}) => {
             justifyContent: 'center',
             borderRadius: scale(10),
           }}>
-          <View style={{marginBottom: 10,}}>
-            <Text style={{color: Colors.grey}}>
+          <View style={{ marginBottom: 10, }}>
+            <Text style={{ color: Colors.grey }}>
               Time To Deliver / Prepare (Minutes)
             </Text>
           </View>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <TouchableOpacity
               style={{
                 borderWidth: scale(1),
@@ -736,7 +735,7 @@ const NewOrdersScreen = ({navigation}) => {
                 justifyContent: 'center',
               }}
               onPress={decrement}>
-              <Text style={{fontSize: scale(25)}}>-</Text>
+              <Text style={{ fontSize: scale(25) }}>-</Text>
             </TouchableOpacity>
             <View
               style={{
@@ -761,7 +760,7 @@ const NewOrdersScreen = ({navigation}) => {
                 justifyContent: 'center',
               }}
               onPress={incrtement}>
-              <Text style={{fontSize: scale(20)}}>+</Text>
+              <Text style={{ fontSize: scale(20) }}>+</Text>
             </TouchableOpacity>
           </View>
         </View>

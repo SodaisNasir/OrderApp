@@ -3,7 +3,7 @@ import { apiUrl } from '../../../important/Urls';
 import Toast from 'react-native-simple-toast';
 
 // LOGIN
-export const Login = (data,setLoader) => {
+export const Login = (data, setLoader) => {
   return async (dispatch) => {
     try {
       const notification = await AsyncStorage.getItem('onesignaltoken');
@@ -45,8 +45,8 @@ export const Login = (data,setLoader) => {
       }
     } catch (error) {
       console.log('ERROR ==>', error);
-    }finally{
-      if(setLoader){
+    } finally {
+      if (setLoader) {
         setLoader(false)
       }
     }
@@ -54,34 +54,35 @@ export const Login = (data,setLoader) => {
 };
 
 // GET ORDERS
-export const getOrders = (type,setLoader) => {
+export const getOrders = (type, setLoader) => {
   return async (dispatch) => {
     try {
-      if(setLoader){
+      if (setLoader) {
         setLoader(true)
       }
       const myHeaders = new Headers();
       myHeaders.append('Authorization', 'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB');
-  
+
       const formdata = new FormData();
       formdata.append('status', type);
-  
+
       const requestOptions = {
         method: 'POST',
         headers: myHeaders,
         body: formdata,
         redirect: 'follow',
       };
-  
+
       const response = await fetch(`${apiUrl}get-orders`, requestOptions);
-  
+      console.log('response===========>', response)
+
       // console.log('response', response)
       if (response.ok) {
         const data = await response.json();
         // console.log('DATA in getOrders ==>', data.success.user);
-  
+
         let OrderAction;
-  
+
         if (type === 'neworder') {
           OrderAction = {
             type: 'NEWORDERS',
@@ -98,14 +99,14 @@ export const getOrders = (type,setLoader) => {
             payload: data?.success?.user,
           };
         }
-  
+
         dispatch(OrderAction);
       }
-      
+
     } catch (error) {
       console.log('error', error)
-    } finally{
-      if(setLoader){
+    } finally {
+      if (setLoader) {
         setLoader(false)
       }
     }
@@ -113,7 +114,7 @@ export const getOrders = (type,setLoader) => {
 };
 
 // UPDATE ORDER STATUS
-export const updateOrderStatus = (status, orderId, print, setLoading,order) => {
+export const updateOrderStatus = (status, orderId, print, setLoading, order) => {
   return async (dispatch) => {
     setLoading(true);
     try {
@@ -137,7 +138,7 @@ export const updateOrderStatus = (status, orderId, print, setLoading,order) => {
         dispatch(getOrders('neworder'));
         dispatch(getOrders('pending'));
 
-        if(status != 'delivered'){
+        if (status != 'delivered') {
           print(order);
         }
       } else {
@@ -151,7 +152,7 @@ export const updateOrderStatus = (status, orderId, print, setLoading,order) => {
   };
 };
 
-export const orderDelivrdAPI = (status, orderId, print, setLoading,navigation) => {
+export const orderDelivrdAPI = (status, orderId, print, setLoading, navigation) => {
   return async (dispatch) => {
     setLoading(true);
     try {
@@ -177,19 +178,19 @@ export const orderDelivrdAPI = (status, orderId, print, setLoading,navigation) =
       // const response = await fetch(`https://foodola.foodola.shop/API/POS/update_order_status.php`, requestOptions);
       const response = await fetch(`${apiUrl}change-status/${orderId}`, requestOptions);
       if (response.ok) {
-      const userData =  await AsyncStorage.getItem('user');
-      const parseData = JSON.parse(userData)
+        const userData = await AsyncStorage.getItem('user');
+        const parseData = JSON.parse(userData)
         // const data = await response.json();
         dispatch(getOrders('delivered'));
         dispatch(getOrders('neworder'));
         dispatch(getOrders('pending'));
 
-         dispatch(getRiderOrders('shipped', parseData?.id, setLoading));
+        dispatch(getRiderOrders('shipped', parseData?.id, setLoading));
 
-         setTimeout(() => {
-           navigation.goBack()
-           Toast.show('Order has been delivered!', Toast.SHORT);
-         }, 1500);
+        setTimeout(() => {
+          navigation.goBack()
+          Toast.show('Order has been delivered!', Toast.SHORT);
+        }, 1500);
         // if(status != 'delivered'){
         //   print(data.success.qr_code);
         // }
@@ -200,7 +201,7 @@ export const orderDelivrdAPI = (status, orderId, print, setLoading,navigation) =
     } catch (error) {
       setLoading(false);
       console.log('ERROR ==>', error);
-    }finally{
+    } finally {
       setTimeout(() => {
         setLoading(false);
       }, 1500);
@@ -267,7 +268,7 @@ export const getRiderOrders = (type, id, setLoad) => {
       'Authorization',
       'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB',
     );
-console.log('id', id)
+    console.log('id', id)
     var formdata = new FormData();
     formdata.append('status', type);
     formdata.append('rider_id', id);
@@ -288,7 +289,7 @@ console.log('id', id)
         payload: data?.success?.user,
       };
       dispatch(OrderAction);
-     
+
     } else {
       const data = await response.json();
       const OrderAction = {
