@@ -14,42 +14,43 @@ import {
 import { Navigator } from './src/Navigation/Navigator';
 import { Provider, useDispatch } from 'react-redux';
 import store from './src/Redux/Strore';
-import {OneSignal, LogLevel} from 'react-native-onesignal';
+import { OneSignal, LogLevel } from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getOrders, getRiderDeliveries } from './src/Redux/Reducers/Actions';
 import SplashScreen from 'react-native-splash-screen';
+import { NavigationContainer } from '@react-navigation/native';
 
 
 function App() {
   const dispatch = useDispatch();
 
 
-//   useEffect(() => {
-//   // Initialize OneSignal SDK with your app ID
-//   OneSignal.initialize('90598f53-e67e-47b1-afe8-8419b27d0756');
+  //   useEffect(() => {
+  //   // Initialize OneSignal SDK with your app ID
+  //   OneSignal.initialize('90598f53-e67e-47b1-afe8-8419b27d0756');
 
-//   // Prompt user for push notifications permission
-//   OneSignal.Notifications.requestPermission(true);
+  //   // Prompt user for push notifications permission
+  //   OneSignal.Notifications.requestPermission(true);
 
-//   // Listen for notification click events
-//   OneSignal.Notifications.addEventListener('click', (event) => {
-//     console.log('Notification clicked:', event);
-//   });
+  //   // Listen for notification click events
+  //   OneSignal.Notifications.addEventListener('click', (event) => {
+  //     console.log('Notification clicked:', event);
+  //   });
 
-//   // Listen for push subscription state changes (to get OneSignal user ID)
-//   OneSignal.User.pushSubscription.addEventListener('change', async (event) => {
-//     if (event.to.optedIn) {
-//       const oneSignalUserId = await OneSignal.User.pushSubscription.getIdAsync();
-//       console.log('noti TOKEN ==>', oneSignalUserId);
-//       await AsyncStorage.setItem('onesignaltoken', oneSignalUserId);
-//     }
-//   });
+  //   // Listen for push subscription state changes (to get OneSignal user ID)
+  //   OneSignal.User.pushSubscription.addEventListener('change', async (event) => {
+  //     if (event.to.optedIn) {
+  //       const oneSignalUserId = await OneSignal.User.pushSubscription.getIdAsync();
+  //       console.log('noti TOKEN ==>', oneSignalUserId);
+  //       await AsyncStorage.setItem('onesignaltoken', oneSignalUserId);
+  //     }
+  //   });
 
-//   // Call your local method to check stored user data
-//   checkAsyncStorage();
-// }, []);
+  //   // Call your local method to check stored user data
+  //   checkAsyncStorage();
+  // }, []);
 
-useEffect(() => {
+  useEffect(() => {
     // Set the log level for debugging
     OneSignal.Debug.setLogLevel(LogLevel.Verbose);
 
@@ -92,7 +93,7 @@ useEffect(() => {
         // console.log("Device User ID:", event.current.token || deviceToken);
         await AsyncStorage.setItem('onesignaltoken', userId || '');
         await AsyncStorage.setItem('deviceToken', userId);
-        
+
       }
     });
 
@@ -121,14 +122,14 @@ useEffect(() => {
     // };
   }, []);
   if (Platform.OS !== 'ios') {
-      setTimeout(() => {
-        SplashScreen.hide();
-      }, 3500);
-    } else {
+    setTimeout(() => {
       SplashScreen.hide();
-    }
-  const check = async ()=>{
-    const notification =  await AsyncStorage.getItem('onesignaltoken');
+    }, 3500);
+  } else {
+    SplashScreen.hide();
+  }
+  const check = async () => {
+    const notification = await AsyncStorage.getItem('onesignaltoken');
     console.log('notification ======>', notification)
 
   }
@@ -157,7 +158,9 @@ useEffect(() => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <Navigator />
+      <NavigationContainer>
+        <Navigator />
+      </NavigationContainer>
     </SafeAreaView>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, View, Text } from 'react-native';
 import { Colors } from '../../../important/Colors';
 import CustomTextInput from '../../Components/CustomInput';
@@ -6,13 +6,18 @@ import { useForm } from 'react-hook-form';
 import { moderateScale, scale } from 'react-native-size-matters';
 import CustomButton from '../../Components/CustomButton';
 import { useDispatch } from 'react-redux';
-import { Login } from '../../Redux/Reducers/Actions';
+import { getBaseUrlAPI, Login } from '../../Redux/Reducers/Actions';
 
 const LoginScreen = () => {
 
   const dispatch = useDispatch();
 
+
   const [loader, setLoader] = useState(false)
+
+
+  const [baseReady, setBaseReady] = useState(false);
+
 
   const {
     control,
@@ -20,30 +25,81 @@ const LoginScreen = () => {
     formState: { errors },
   } = useForm({
     mode: 'all', defaultValues: {
-      // email: 'mateen737@gmail.com',
-      // password: '12345678'
       email: '',
       password: ''
     }
   });
 
 
-  const handleLogin = data => {
+
+
+  const handleLogin = async data => {
+
     setLoader(true)
-    // const loginAction: Login = {
-    //   type: 'LOGIN',
-    //   payload: {
-    //     // Provide your user details here
-    //     // For example:
-    //     id: 1,
-    //     username: 'john_doe',
-    //     email: data.email,
-    //   },
-    // };
-    // console.log('first',data)
-    dispatch(Login(data, setLoader));
-    // dispatch(loginAction);
+    try {
+      console.log('🔹 Fetching Base URL using:', data.email, data.password);
+
+      const baseUrl = await getBaseUrlAPI(data, dispatch, setLoader);
+
+      console.log('✅ Base URL ready:', baseUrl);
+
+      if (baseUrl) {
+        dispatch(Login(data, setLoader));
+      } else {
+        Alert.alert('Error', 'Base URL not found. Please try again.');
+        setLoader(false);
+      }
+    } catch (error) {
+      console.log('Error in handleLogin:', error);
+      Alert.alert('Error', 'Failed to connect. Please try again.');
+      setLoader(false);
+    }
+
   };
+
+
+  // const email = 'foodola@gmail.com'
+  // const password = 'admin1234'
+
+  // useEffect(() => {
+  //   (async () => {
+  //     try {
+  //       const base = await getBaseUrlAPI(email, password, dispatch);
+  //       console.log('Fetched Base URL:', base);
+  //       setBaseReady(true);
+  //     } catch (error) {
+  //       console.log('Base URL fetch failed');
+  //     }
+  //   })();
+  // }, []);
+
+  // const handleLogin = data => {
+  //   if (!baseReady) {
+  //     alert('Please wait, setting up connection...');
+  //     return;
+  //   }
+  //   setLoader(true);
+  //   dispatch(Login(data, setLoader,));
+  // };
+
+
+
+  // const handleLogin = data => {
+  //   setLoader(true)
+  //   // const loginAction: Login = {
+  //   //   type: 'LOGIN',
+  //   //   payload: {
+  //   //     // Provide your user details here
+  //   //     // For example:
+  //   //     id: 1,
+  //   //     username: 'john_doe',
+  //   //     email: data.email,
+  //   //   },
+  //   // };
+  //   // console.log('first',data)
+  //   dispatch(Login(data, setLoader));
+  //   // dispatch(loginAction);
+  // };
 
   const [index, setIndex] = useState(100);
   return (
@@ -63,7 +119,7 @@ const LoginScreen = () => {
             rules={{
               required: '*Email is required',
               pattern: {
-                value: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+                value: /^\w+([.-]?\w+)@\w+([.-]?\w+)(\.\w{2,3})+$/,
                 message: 'Email is not valid',
               },
             }}
