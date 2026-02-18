@@ -372,6 +372,38 @@ export const Login = (data, setLoader) => {
 
 
 
+export const getDepartment = (setDepartments) => {
+  return async (dispatch) => {
+
+    // setLoading(true);
+    try {
+      const myHeaders = new Headers();
+      myHeaders.append('Authorization', 'Bearer 9H$7sT#kP&5A@N*3L6X8Y2Z1W!V0UQJRB');
+
+      const requestOptions = {
+        method: 'GET',
+        headers: myHeaders,
+        redirect: 'follow',
+      };
+      const baseUrl = await AsyncStorage.getItem('baseUrl');
+
+
+      const response = await fetch(`${baseUrl}departments`, requestOptions);
+      // const response = await fetch(${apiUrl}change-status/${orderId}, requestOptions);
+      const result = await response.json();
+      console.log('get department========================:', result);
+      setDepartments(result?.success?.data)
+
+
+    } catch (error) {
+      // setLoading(false);
+      console.log('ERROR ======>', error);
+    }
+  };
+};
+
+
+
 
 
 export const getBaseUrlAPI = async (data, dispatch, setLoader) => {
@@ -396,7 +428,10 @@ export const getBaseUrlAPI = async (data, dispatch, setLoader) => {
 
       await AsyncStorage.setItem('baseUrl', baseUrl);
       await AsyncStorage.setItem('PdfBaseUrl', PdfBaseUrl);
-      console.log('PdfBaseUrl=========>', PdfBaseUrl)
+      const AuthDetails = JSON.stringify(result.success.data);
+      await AsyncStorage.setItem('AuthDetails', AuthDetails);
+  
+
 
 
 
@@ -448,14 +483,13 @@ export const getOrders = (type, setLoader) => {
       const baseUrl = await AsyncStorage.getItem('baseUrl');
       const response = await fetch(`${baseUrl}get-orders`, requestOptions);
       // const response = await fetch(${apiUrl}get-orders, requestOptions);
-      console.log('response===========> order A rha hai', response)
+      // console.log('response===========> order A rha hai', JSON.stringify(response))
 
 
-      // console.log('response', response)
+    
       if (response.ok) {
         const data = await response.json();
-        // console.log('DATA in getOrders ==>', data.success.user);
-
+          // console.log('response-==================================================', JSON.stringify(data?.success?.user))
         let OrderAction;
 
         if (type === 'neworder') {

@@ -151,12 +151,12 @@ export const KitchenTabs = () => {
         />
         <BottomTab.Screen
           name="Settings"
-          listeners={{
-            tabPress: e => {
-              e.preventDefault();
-              setModalVisible(true)
-            },
-          }}
+          // listeners={{
+          //   tabPress: e => {
+          //     e.preventDefault();
+          //     setModalVisible(true)
+          //   },
+          // }}
           options={{
             headerShown: false,
             tabBarShowLabel: false,

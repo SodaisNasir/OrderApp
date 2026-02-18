@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(100),
     marginTop: verticalScale(5),
     alignSelf: 'center',
-    backgroundColor: Colors.textBlue,
+    backgroundColor: Colors.primary,
     height: verticalScale(45),
     flexDirection: 'row',
     overflow: 'hidden',

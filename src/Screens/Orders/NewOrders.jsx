@@ -51,8 +51,12 @@ const NewOrdersScreen = ({ navigation }) => {
   const [isPrintingEnabled, setIsPrintingEnabled] = useState(false);
   const [allPairDevices, setAllPairDevices] = useState([]);
   const [time, setTime] = useState(30);
+  const [selectedDepartments, setselectedDepartments] = useState([]);
 
-  console.log('selectedMac', selectedMac)
+
+  const [kitchenSlip, setkitchenSlip] = useState(false)
+
+
 
   const user = useSelector(state => state.auth?.userDetails);
   const orders = useSelector(state => state.auth?.newOrders);
@@ -79,16 +83,17 @@ const NewOrdersScreen = ({ navigation }) => {
 
   const connectToPussher = async pusher => {
     try {
+      const AuthDetails = await AsyncStorage.getItem('AuthDetails')
+      const Data = JSON.parse(AuthDetails);
       await pusher.init({
         apiKey: 'a1964c3ac950c1a0cdf5',
         cluster: 'mt1',
       });
       await pusher.subscribe({
-        channelName: 'orders',
+        channelName: Data.channel_1,
         onEvent: event => {
           // console.log('Ye Chal Raha ha');
           console.log(`Got channel event: ${event.data}`);
-          // alert('b')
           if (event.eventName === 'new_order') {
             dispatch(getOrders('neworder'));
             Playbell();
@@ -128,7 +133,9 @@ const NewOrdersScreen = ({ navigation }) => {
   const type = user?.role_id == '1' ? 'kitchen' : null;
 
   useFocusEffect(
+
     useCallback(() => {
+
       navigation.getParent()?.setOptions({
         tabBarStyle: { display: 'flex', backgroundColor: Colors.primary },
         swipeEnabled: true,
@@ -137,6 +144,7 @@ const NewOrdersScreen = ({ navigation }) => {
       if (user?.role_id == 2) {
         dispatch(getRiderDeliveries(user.id));
       } else {
+        getinitialData()
         dispatch(getOrders('neworder'));
       }
       setIsRefreshing(false);
@@ -208,6 +216,7 @@ const NewOrdersScreen = ({ navigation }) => {
   // }, []);
 
   const handleTogglePrint = async () => {
+
     setIsPrintingEnabled(prev => {
       const nextValue = !prev;
 
@@ -251,10 +260,23 @@ const NewOrdersScreen = ({ navigation }) => {
     });
   };
 
+  const getinitialData = async () => {
+    const departmentsData = await AsyncStorage.getItem('Departments');
+    const parsedDepartments = departmentsData
+      ? JSON.parse(departmentsData)
+      : [];
+    setselectedDepartments(parsedDepartments)
+    const kitchenSlip = await AsyncStorage.getItem('kitchenSlip');
+    setkitchenSlip(kitchenSlip === 'true' ? true : false);
+  }
+
+
   useEffect(() => {
+
     if (!isPrintingEnabled) return;
 
     const interval = setInterval(() => {
+      console.log('interval testing')
       if (!orders || orders.length === 0) return;
 
       // Print new orders not yet printed or failed
@@ -289,6 +311,9 @@ const NewOrdersScreen = ({ navigation }) => {
 
   const autoPrintOrder = async order => {
     try {
+
+      console.log("order data for each order===================", order)
+
       const connectedPrinter = await RNBluetoothClassic.isBluetoothEnabled();
 
       if (!connectedPrinter) {
@@ -338,31 +363,45 @@ const NewOrdersScreen = ({ navigation }) => {
       // }
 
       // Set selected MAC address and proceed with print
-      console.log('third');
+
       // setSelectedMac(selectedPrinter.macAddress);
 
       const status = order.status === 'neworder' ? 'pending' : order.status;
+
+
 
       dispatch(
         updateOrderStatus(
           status,
           order.id,
           printReceipt,
-          // async () => {
-          //   console.log('[AutoPrint] Status updated, starting print...');
-          //   const result = await printReceipt(order);
-          //   if (result?.success) {
-          //     console.log('[AutoPrint] Print successful');
-          //     printedOrderIdsRef.current.push(order.id);
-          //     Toast.show('Order printed successfully.', Toast.SHORT);
-          //   } else {
-          //     console.warn('[AutoPrint] Print failed');
-          //     Toast.show('Failed to print order.', Toast.SHORT);
-          //     if (!failedOrderIdsRef.current.includes(order.id)) {
-          //       failedOrderIdsRef.current.push(order.id);
-          //     }
-          //   }
-          // },
+          async () => {
+
+            const result = await printReceipt(order);
+            if (result?.success) {
+
+
+              if (kitchenSlip) {
+                for (const item of order.departments) {
+                  console.log('[AutoPrint] Status updated, starting print...', item);
+                  if (selectedDepartments.includes(item.department_id)) {
+                    await printKitchenReceipt(order, item);
+                  }
+                }
+              }
+
+
+              console.log('[AutoPrint] Print successful');
+              printedOrderIdsRef.current.push(order.id);
+              Toast.show('Order printed successfully.', Toast.SHORT);
+            } else {
+              // console.warn('[AutoPrint] Print failed');
+              // Toast.show('Failed to print order.', Toast.SHORT);
+              if (!failedOrderIdsRef.current.includes(order.id)) {
+                failedOrderIdsRef.current.push(order.id);
+              }
+            }
+          },
           setLoading,
           order,
         ),
@@ -379,6 +418,202 @@ const NewOrdersScreen = ({ navigation }) => {
       } else {
         Toast.show(`Print error: ${error.message}`, Toast.SHORT);
       }
+    }
+  };
+
+
+  const printKitchenReceipt = async (order, depatment) => {
+
+    const items = order.order_details?.product?.map(product => ({
+      qty: product.qty,
+      name: product.product_details?.name || 'Unnamed',
+      department_id: product.product_details?.department_id,
+      department_name: product.product_details?.department_name,
+      price: (() => {
+        const basePrice = parseFloat(product.price);
+        const addons = JSON.parse(product.addons || '[]');
+        const types = JSON.parse(product.types || '[]');
+        const dressing = JSON.parse(product.dressing || '[]');
+
+        const addonTotal = addons.reduce(
+          (sum, a) => sum + parseFloat(a.as_price || 0),
+          0,
+        );
+        const typeTotal = types.reduce(
+          (sum, t) => sum + parseFloat(t.price || 0),
+          0,
+        );
+        const dressingTotal = dressing.reduce(
+          (sum, d) => sum + parseFloat(d.price || 0),
+          0,
+        );
+
+        return basePrice + addonTotal + typeTotal + dressingTotal;
+      })(),
+    }));
+
+    const sub_total = items.reduce(
+      (acc, item) => acc + item.price * parseInt(item.qty),
+      0,
+    );
+    const dealTotal = order?.order_details?.deals?.reduce((sum, deal) => {
+      return sum + parseFloat(deal.deal_details?.deal_price || 0);
+    }, 0);
+
+    const combinedSubtotal = sub_total + dealTotal;
+
+    const addonData = order.order_details?.product?.map((elem, index) => {
+      const basePrice = parseFloat(elem.price);
+      const qty = parseInt(elem.qty);
+
+      const addons = JSON.parse(elem.addons || '[]');
+      const types = JSON.parse(elem.types || '[]');
+      const dressing = JSON.parse(elem.dressing || '[]');
+
+      return {
+        addons: addons.map(a => ({
+          title: a.ao_title,
+          name: a.as_name,
+          price: parseFloat(a.as_price),
+          quantity: a.quantity,
+        })),
+        types: types.map(t => ({
+          name: t.ts_name,
+          price: parseFloat(t.price),
+        })),
+        dressing: dressing.map(d => ({
+          name: d.dressing_name,
+          price: parseFloat(d.price || 0),
+        })),
+      };
+    });
+
+    const AuthDetails = await AsyncStorage.getItem('AuthDetails')
+    const Data = JSON.parse(AuthDetails);
+
+
+    const orderData = {
+      orderNo: order?.id,
+      date: order?.created_at,
+      phone: order?.userDetails?.phone,
+      email: order?.userDetails?.email,
+      name: order?.userDetails?.name,
+      shipping: order?.Shipping_address_2,
+      city: order?.Shipping_city,
+      postal: order?.Shipping_postal_code,
+      shipping_address: order?.Shipping_address,
+      shipping_area: order?.Shipping_area,
+      add_notes: order?.addtional_notes,
+      items,
+      paymentMethod: order?.payment_type,
+      subtotal: Number(combinedSubtotal).toFixed(2),
+      discount: Number(order?.total_discount).toFixed(2),
+      delivery: Number(order?.Shipping_Cost).toFixed(2),
+      tax7: Number(order?.total_netto_tax).toFixed(2),
+      tax19: Number(order?.total_metto_tax).toFixed(2),
+      total: Number(order?.order_total_price) + Number(order?.Shipping_Cost),
+      qrCode: order?.qr_code,
+    };
+
+    let receiptText = '';
+    receiptText += `[C]<b><font size='tall'>${depatment.department_name}</font></b>\n`;
+    receiptText += '[L]\n';
+    receiptText += `[C]Bestellung Nr: ${orderData.orderNo}\n`;
+    receiptText += '------------------------------------------------\n';
+    receiptText += `[L]<b><font size='tall'>Produkt</font></b>`;
+    receiptText += `[R]<b><font size='tall'>Menge</font></b> \n`;
+    receiptText += '------------------------------------------------\n';
+
+    orderData.items.forEach((item, idx) => {
+      if (item.department_id === depatment.department_id) {
+        receiptText += `[L]<b>${item.name}     [R]x${item.qty}</b>\n`;
+        // receiptText += '[L]\n';
+
+        addonData[idx]?.addons?.forEach(addon => {
+          receiptText += `[L]<b>x${addon.quantity} ${addon.name}</b>\n`;
+          // receiptText += '[L]\n';
+        });
+
+        addonData[idx]?.types?.forEach(type => {
+          if (type.name) receiptText += `[L]        <b>${type.name}</b>\n`;
+          // receiptText += '[L]\n';
+        });
+
+        addonData[idx]?.dressing?.forEach(d => {
+          if (d.name) receiptText += `[L]           <b>${d.name}</b>\n`;
+          // receiptText += '[L]\n';
+        });
+
+        receiptText += '------------------------------------------------\n';
+      }
+    });
+
+    if (order?.order_details?.deals?.length) {
+      order?.order_details?.deals.forEach((deal, dealIndex) => {
+        const dealInfo = deal.deal_details;
+        const dealProducts = deal.deal_product;
+
+        receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(
+          dealInfo.deal_price,
+        ).toFixed(2)}</b>\n`;
+        // receiptText += '[L]\n';
+
+        dealProducts.forEach((product, productIndex) => {
+          receiptText += `[L]<b>${product.product_name}</b>\n`;
+          // receiptText += '[L]\n';
+
+          // Addons
+          if (product.addons?.length) {
+            product.addons.forEach(addon => {
+              // const price = addon.as_price === "0" || addon.isFreeInDeal === "1" ? "Free" : `${parseFloat(addon.as_price).toFixed(2)}`;
+              receiptText += `[L]        <b>x${addon.quantity} ${addon.as_name}</b>\n`;
+              // receiptText += '[L]\n';
+            });
+          }
+
+          // Types
+          const types = JSON.parse(product.types || '[]');
+          if (types.length) {
+            types.forEach(t => {
+              receiptText += `[L]        <b>${t.ts_name}\n</b>`;
+              receiptText += '[L]\n';
+            });
+          }
+
+          // Dressing
+          const dressing = JSON.parse(product.dressing || '[]');
+          if (dressing.length) {
+            dressing.forEach(d => {
+              receiptText += `[L]        <b>${d.dressing_name}</b>\n`;
+              // receiptText += '[L]\n';
+            });
+          }
+
+          // receiptText += '[L]\n';
+        });
+
+        receiptText += '------------------------------------------------\n';
+      });
+    }
+
+
+    try {
+
+      const result = await ThermalPrinter.printBluetooth({
+        payload: receiptText,
+        macAddress: selectedMac?.address, // make sure it's trimmed
+        printerWidthMM: 80,
+        printerNbrCharactersPerLine: 48,
+        autoCut: true,
+      });
+      Toast.show('Your Order has been printed successfully.', Toast.SHORT,);
+
+      console.log('Printed successfully!', result);
+    } catch (err) {
+      console.log('Failed to print:', JSON.stringify(err, null, 2));
+    } finally {
+      setLoading(false);
+      setLoading2(false);
     }
   };
 
@@ -445,6 +680,11 @@ const NewOrdersScreen = ({ navigation }) => {
       };
     });
 
+    const AuthDetails = await AsyncStorage.getItem('AuthDetails')
+    const Data = JSON.parse(AuthDetails);
+
+    console.log("The order inside print", JSON.stringify(order))
+
     const orderData = {
       orderNo: order?.id,
       date: order?.created_at,
@@ -469,34 +709,36 @@ const NewOrdersScreen = ({ navigation }) => {
     };
 
     let receiptText = '';
-    receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
+    receiptText += `[C]<b><font size='tall'>${Data.url}</font></b>\n`;
     receiptText += '[L]\n';
-    receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
+    receiptText += `[C]${Data.address}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Tel: ${Data.phone}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Bestellung Nr: ${orderData.orderNo}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Datum: ${orderData.date}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Telefon: <b><font size='normal'>${orderData.phone}</font></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Email: <b><font size='normal'>${orderData.email}</font></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]<p>Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]<p>Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
+    // receiptText += '[L]\n';
+    // receiptText += `[C]<b></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]<b><font size='normal'>${orderData.postal}</font></b>\n`;
     receiptText += '[L]\n';
-    receiptText += `[C]<b>Tel: 0725326560-61</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Bestellung Nr: ${orderData.orderNo}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Datum: ${orderData.date}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Telefon: ${orderData.phone}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Email: ${orderData.email}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Adress: ${orderData.shipping_address}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Name: ${orderData.name}\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.shipping}-${orderData.city}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.postal}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Befehl Einzelheiten*</b>\n \n`;
-    receiptText += '[L]\n';
+    receiptText += `[C]<b>Zahlungsmodus:<font size='normal'>${orderData.payment_type === "cash" ? "Barzahlung" : "Online-Zahlung"}</font></b>\n`;
+    receiptText += `[C]<b>Auftragsart:<font size='normal'>${orderData.order_type === "delivery" ? "Lieferung" : "Abholen"}</font></b>\n`;
+    // receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
+    // receiptText += '[L]\n';
+    // receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Befehl Einzelheiten*\n`;
+    // receiptText += '[L]\n';
     receiptText += '------------------------------------------------\n';
     receiptText += `<b><font size='tall'>Menge    Produkt                          Preis</font></b> \n`;
     receiptText += '------------------------------------------------\n';
@@ -573,24 +815,27 @@ const NewOrdersScreen = ({ navigation }) => {
     }
     receiptText += '[L]\n';
     receiptText += `[L]<b>Zwischensumme:</b> [R]<b>${orderData.subtotal}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>Rabatt:</b> [R]<b>${orderData.discount}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>Lieferung:</b> [R]<b>${orderData.delivery}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>MwSt. (7%):</b> [R]<b>${orderData.tax7}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>MwSt. (19%):</b> [R]<b>${orderData.tax19}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += '------------------------------------------------\n';
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>Gesamt:</b> [R]<b>${orderData.total}</b>\n\n`;
 
     receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
+
     receiptText += '================================================\n\n';
-    receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
-    receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
+    receiptText += `[C]<b><font size='big'>Vielen Dank!</font></b>\n\n`;
+    receiptText += `[L]<qrcode size='70'>${order?.id}</qrcode>\n`;
+    receiptText += `\n\n`;
+
 
     try {
       //   setLoading(true);
@@ -621,11 +866,11 @@ const NewOrdersScreen = ({ navigation }) => {
       //   fonttype: 1,
       // });
 
-      console.log('selectedMac', selectedMac);
+
 
       const result = await ThermalPrinter.printBluetooth({
         payload: receiptText,
-        macAddress: selectedMac, // make sure it's trimmed
+        macAddress: selectedMac?.address, // make sure it's trimmed
         printerWidthMM: 80,
         printerNbrCharactersPerLine: 48,
         autoCut: true,
@@ -694,20 +939,26 @@ const NewOrdersScreen = ({ navigation }) => {
         <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
           <Text
             style={{
-              color: isPrintingEnabled ? Colors.buttongrad2 : Colors.white,
+              color: isPrintingEnabled ? Colors.lightprimary : Colors.white,
             }}>
-            {selectedMac ? selectedMac : 'No Printer Selected'}
+            {
+              !selectedMac
+                ? "No Printer Selected"
+                : isPrintingEnabled
+                  ? "Auto Print Enabled"
+                  : "Auto Print Disabled"
+            }
           </Text>
           <Feather
             name={'printer'}
             size={20}
-            color={isPrintingEnabled ? Colors.buttongrad2 : Colors.white}
+            color={isPrintingEnabled ? Colors.lightprimary : Colors.white}
           />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.down}>
-          <Text style={{ color: Colors.white }}>Change Printer</Text>
+          <Text style={{ color: Colors.white }}> {selectedMac ? selectedMac?.name : 'Select Printer'}</Text>
           <Feather name={'printer'} size={20} color={Colors.white} />
         </TouchableOpacity>
         <View

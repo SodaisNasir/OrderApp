@@ -46,7 +46,7 @@ const BluetoothModal = ({modalVisible, setModalVisible, setSelectedMac}) => {
   const handlePrinterSelect = async item => {
     try {
       console.log('item?.address', item?.address)
-      setSelectedMac(item?.address);
+      setSelectedMac(item);
       await AsyncStorage.setItem('selectedPrinterMac', item?.address); // ⬅️ Save to AsyncStorage
       setModalVisible(false);
       Toast.show('Printer selected successfully', Toast.SHORT);

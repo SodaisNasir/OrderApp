@@ -47,14 +47,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   // console.log('order', JSON.stringify(order));
 
   useEffect(() => {
-      if (Platform.OS === 'android') {
-        PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        ]);
-      }
+    if (Platform.OS === 'android') {
+      PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      ]);
+    }
   }, [])
-  
+
 
   useFocusEffect(
     useCallback(() => {
@@ -62,24 +62,24 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         .getParent()
         ?.setOptions({ tabBarStyle: { display: 'none' }, swipeEnabled: false });
       getPDFData(setpdfData, order?.id);
-   
+
       fetchDevices();
     }, []),
   );
-  
+
   const fetchDevices = async () => {
- try {
-   const list = await ThermalPrinter.getBluetoothDeviceList();
-   console.log('Devices:', list);
-   setDevices(list);
-   if (list.length > 0) {
-     console.log('first');
-     // setSelectedMac(list[0].macAddress);
-   }
- } catch (err) {
-   console.log('Error getting devices', err);
- }
-};
+    try {
+      const list = await ThermalPrinter.getBluetoothDeviceList();
+      console.log('Devices:', list);
+      setDevices(list);
+      if (list.length > 0) {
+        console.log('first');
+        // setSelectedMac(list[0].macAddress);
+      }
+    } catch (err) {
+      console.log('Error getting devices', err);
+    }
+  };
   const dispatch = useDispatch();
 
   const onConfirm = async (elmnt) => {
@@ -128,17 +128,17 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
       if (!bondedDevices || bondedDevices?.length === 0) {
         Toast.show('No paired Bluetooth printer found. Please pair one.', Toast.SHORT);
-    
+
         if (Platform.OS === 'android') {
-         RNBluetoothClassic.openBluetoothSettings()
+          RNBluetoothClassic.openBluetoothSettings()
         } else {
-           RNBluetoothClassic.openBluetoothSettings()
+          RNBluetoothClassic.openBluetoothSettings()
         }
-    
+
         return false;
       }
-     const SelectedPrinter =  await AsyncStorage.getItem('selectedPrinterMac')
-    console.log('SelectedPrinter', SelectedPrinter)
+      const SelectedPrinter = await AsyncStorage.getItem('selectedPrinterMac')
+      console.log('SelectedPrinter', SelectedPrinter)
       if (!SelectedPrinter) {
         Toast.show(
           'Please Select Printer',
@@ -150,10 +150,10 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         // } else {
         //    RNBluetoothClassic.openBluetoothSettings()
         // }
-    
+
         return false;
       }
-    
+
 
       const selectedPrinter = devices[0];
 
@@ -178,7 +178,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
     navigationRoute.goBack();
   };
- 
+
   const incrtement = () => {
     setTime(prev => prev + 10);
   };
@@ -191,10 +191,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const handleRiderConfirm = (status) => {
     dispatch(orderDelivrdAPI(status, order.id, printReceipt, setLoading2, navigation));
   }
-  
+
   const handleKitchenConfirm = (status) => {
     dispatch(orderDelivrdAPI(status, order.id, printReceipt, setLoading2, navigation));
   }
+
+
 
   //   const allExtraPrice = order.order_details?.product?.reduce((total, elem) => {
   //   const addons = JSON.parse(elem.addons || '[]');
@@ -287,41 +289,48 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       qrCode: order?.qr_code
     };
 
+
+    const AuthDetails = await AsyncStorage.getItem('AuthDetails')
+    const Data = JSON.parse(AuthDetails);
+
     let receiptText = '';
-    receiptText += `[C]<b><font size='tall'>Pizzablitzöstringen.de</font></b>\n`;
+    receiptText += `[C]<b><font size='tall'>${Data.url}</font></b>\n`;
     receiptText += '[L]\n';
-    receiptText += `[C]<b>Kuhngasse 1, 76684 Östringen</b>\n`;
+    receiptText += `[C]${Data.address}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Tel: ${Data.phone}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Bestellung Nr: ${orderData.orderNo}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Datum: ${orderData.date}\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Telefon: <b><font size='normal'>${orderData.phone}</font></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Email: <b><font size='normal'>${orderData.email}</font></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]<p>Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]<p>Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
+    // receiptText += '[L]\n';
+    // receiptText += `[C]<b></b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]<b><font size='normal'>${orderData.postal}</font></b>\n`;
     receiptText += '[L]\n';
-    receiptText += `[C]<b>Tel: 0725326560-61</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Bestellung Nr: ${orderData.orderNo}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Datum: ${orderData.date}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Telefon: ${orderData.phone}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Email: ${orderData.email}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Adress: ${orderData.shipping_address}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Name: ${orderData.name}\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.shipping}-${orderData.city}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.postal}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Befehl Einzelheiten*</b>\n \n`;
-    receiptText += '[L]\n';
+    receiptText += `[C]<b>Zahlungsmodus:<font size='normal'>${orderData.payment_type === "cash" ? "Barzahlung" : "Online-Zahlung"}</font></b>\n`;
+    receiptText += `[C]<b>Auftragsart:<font size='normal'>${orderData.order_type === "delivery" ? "Lieferung" : "Abholen"}</font></b>\n`;
+    // receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
+    // receiptText += '[L]\n';
+    // receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
+    // receiptText += '[L]\n';
+    receiptText += `[C]Befehl Einzelheiten*\n`;
+    // receiptText += '[L]\n';
     receiptText += '------------------------------------------------\n';
     receiptText += `<b><font size='tall'>Menge    Produkt                          Preis</font></b> \n`;
     receiptText += '------------------------------------------------\n';
 
     orderData.items.forEach((item, idx) => {
-      receiptText += `[L]<b>x${item.qty}     ${item.name} [R]${item.price.toFixed(2)}</b>\n`;
+      receiptText += `[L]<b>x${item.qty}     ${item.name
+        } [R]${item.price.toFixed(2)}</b>\n`;
       receiptText += '[L]\n';
 
       addonData[idx]?.addons?.forEach(addon => {
@@ -330,14 +339,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       });
 
       addonData[idx]?.types?.forEach(type => {
-        if (type.name)
-          receiptText += `[L]        <b>${type.name}</b>\n`;
+        if (type.name) receiptText += `[L]        <b>${type.name}</b>\n`;
         receiptText += '[L]\n';
       });
 
       addonData[idx]?.dressing?.forEach(d => {
-        if (d.name)
-          receiptText += `[L]        <b>${d.name}</b>\n`;
+        if (d.name) receiptText += `[L]        <b>${d.name}</b>\n`;
         receiptText += '[L]\n';
       });
 
@@ -345,12 +352,13 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     });
 
     if (order?.order_details?.deals?.length) {
-
       order?.order_details?.deals.forEach((deal, dealIndex) => {
         const dealInfo = deal.deal_details;
         const dealProducts = deal.deal_product;
 
-        receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(dealInfo.deal_price).toFixed(2)}</b>\n`;
+        receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(
+          dealInfo.deal_price,
+        ).toFixed(2)}</b>\n`;
         receiptText += '[L]\n';
 
         dealProducts.forEach((product, productIndex) => {
@@ -392,24 +400,26 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
     receiptText += '[L]\n';
     receiptText += `[L]<b>Zwischensumme:</b> [R]<b>${orderData.subtotal}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>Rabatt:</b> [R]<b>${orderData.discount}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>Lieferung:</b> [R]<b>${orderData.delivery}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>MwSt. (7%):</b> [R]<b>${orderData.tax7}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>MwSt. (19%):</b> [R]<b>${orderData.tax19}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += '------------------------------------------------\n';
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
     receiptText += `[L]<b>Gesamt:</b> [R]<b>${orderData.total}</b>\n\n`;
 
     receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
-    receiptText += '[L]\n';
+    // receiptText += '[L]\n';
+
     receiptText += '================================================\n\n';
-    receiptText += `[C]       <b><font size='tall'>Vielen Dank!</font></b>\n`;
-    receiptText += `[C]<qrcode size='20'>${order?.id}</qrcode>`;
+    receiptText += `[C]<b><font size='big'>Vielen Dank!</font></b>\n\n`;
+    receiptText += `[L]<qrcode size='20'>${order?.id}</qrcode>\n`;
+    receiptText += `\n\n`;
 
     try {
       const result = await ThermalPrinter.printBluetooth({
@@ -419,7 +429,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         printerNbrCharactersPerLine: 48,
         autoCut: true,
       });
-       Toast.show('Your order has been printed successfully.', Toast.SHORT);
+      Toast.show('Your order has been printed successfully.', Toast.SHORT);
       setLoading(false)
       setLoading2(false)
     } catch (err) {
@@ -914,7 +924,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </ScrollView>
 
           {accountType == 'kitchen' && order.status == 'pending' ? (
-          <View
+            <View
               style={{
                 height: '9%',
                 flexDirection: 'row',
@@ -935,7 +945,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     // borderBottomLeftRadius: scale(10),
                     backgroundColor: '#22C55E',
                     alignSelf: 'center',
-                    width: '80%',
+                    width: '49%',
                     // marginTop: scale(20),
                     // marginBottom: 10,
                     alignItems: 'center',
@@ -953,8 +963,38 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   />
                 )}
               </TouchableOpacity>
-              </View>
-           ) : null}
+
+              <TouchableOpacity
+                disabled={loading2}
+                onPress={() => printReceipt('delivered')}
+                style={[
+                  {
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    // borderBottomLeftRadius: scale(10),
+                    backgroundColor: '#22C55E',
+                    alignSelf: 'center',
+                    width: '49%',
+                    // marginTop: scale(20),
+                    // marginBottom: 10,
+                    marginLeft: '1%',
+                    alignItems: 'center',
+                    height: '95%',
+                    borderBottomLeftRadius: scale(10),
+                    borderBottomRightRadius: scale(10),
+                  },
+                ]}>
+                {!loading2 ? (
+                  <Text style={{ color: Colors.textColor }}>Reprint</Text>
+                ) : (
+                  <ActivityIndicator
+                    size={'small'}
+                    color={Colors.white}
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {accountType == 'kitchen' && order.status == 'neworder' && (
             <View
               style={{
@@ -1207,198 +1247,198 @@ export default OrderDetailsScreen;
 
 
 
- // const printRecpit = async QRCODE => {
-  //   const results = await RNHTMLtoPDF.convert({
-  //     // html: pdfData,
-  //     html: `<!DOCTYPE html>
-  //     <html>
-  //     <head>
-  //     <style>
-  //       body {
-  //         font-family: Arial, sans-serif;
-  //       }
-  //       .receipt {
-  //         max-width: 300px;
-  //         margin: 0 auto;
-  //         padding: 20px;
-  //         border: 1px solid #ccc;
-  //         border-radius: 5px;
-  //         background-color: #fff;
-  //       }
-  //       .header {
-  //         text-align: center;
-  //         margin-bottom: 10px;
-  //       }
-  //       .restaurant-info {
-  //         margin-bottom: 10px;
-  //         text-align: center;
-  //       }
-  //       .restaurant-logo {
-  //         max-width: 100px;
-  //         height: auto;
-  //       }
-  //       .customer-info {
-  //         margin-top: 20px;
-  //       }
-  //       .info-label {
-  //         font-weight: bold;
-  //       }
-  //       .item {
-  //         display: flex;
-  //         justify-content: space-between;
-  //         margin-bottom: 5px;
-  //       }
-  //       .item-name {
-  //         flex: 1;
-  //       }
-  //       .item-quantity {
-  //         flex: .1;
-  //       }
-  //       .item-price {
-  //         flex-shrink: 0;
-  //       }
-  //       .total {
-  //         text-align: right;
-  //         margin-top: 10px;
-  //         font-weight: bold;
-  //       }
-  //     </style>
-  //     <script ></script>
-  //     </head>
-  //     <body>
+// const printRecpit = async QRCODE => {
+//   const results = await RNHTMLtoPDF.convert({
+//     // html: pdfData,
+//     html: `<!DOCTYPE html>
+//     <html>
+//     <head>
+//     <style>
+//       body {
+//         font-family: Arial, sans-serif;
+//       }
+//       .receipt {
+//         max-width: 300px;
+//         margin: 0 auto;
+//         padding: 20px;
+//         border: 1px solid #ccc;
+//         border-radius: 5px;
+//         background-color: #fff;
+//       }
+//       .header {
+//         text-align: center;
+//         margin-bottom: 10px;
+//       }
+//       .restaurant-info {
+//         margin-bottom: 10px;
+//         text-align: center;
+//       }
+//       .restaurant-logo {
+//         max-width: 100px;
+//         height: auto;
+//       }
+//       .customer-info {
+//         margin-top: 20px;
+//       }
+//       .info-label {
+//         font-weight: bold;
+//       }
+//       .item {
+//         display: flex;
+//         justify-content: space-between;
+//         margin-bottom: 5px;
+//       }
+//       .item-name {
+//         flex: 1;
+//       }
+//       .item-quantity {
+//         flex: .1;
+//       }
+//       .item-price {
+//         flex-shrink: 0;
+//       }
+//       .total {
+//         text-align: right;
+//         margin-top: 10px;
+//         font-weight: bold;
+//       }
+//     </style>
+//     <script ></script>
+//     </head>
+//     <body>
 
-  //     <div class="print"
-  //     style="border:1px solid #a1a1a1; width: 82mm; background: white;padding: 10px; margin: 0 auto; text-align: center;">
-  //     <div class="top_header" style="display: flex;">
-  //         <!-- yahan image ka url dal dioo shahboo -->
-  //         <img src="https://xn--pizzablitzstringen-m3b.de/pizza_blitz/admin_panel/images/logo.png" style="width: 38%">
-  //         <h3 style="font-size: 17px;font-family: sans-serif;margin: 54px 0 0 -20px">pizzablitzöstringen.de</h3>
-  //     </div>
-  //     <div class="middle-header">
-  //         <h3 style="font-size: 15px;font-weight: 800;font-family: math;margin: 7px 0 0 0;">Kuhngasse 1, 76684
-  //             Östringen</h3>
-  //         <h3 style="    font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Östringen,
-  //             Tell:0725326560-61</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">
-  //             Befehl no: ${order?.id}</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.created_at
-  //         }</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Phone: +4917682540212</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Email:
-  //             Jonas.bender.1@web.de</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Address:</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Name: ${
-  //           order?.Shipping_address
-  //         }</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.Shipping_address_2
-  //         } ${order?.Shipping_city}</h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.Shipping_postal_code
-  //         } </h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.Shipping_area
-  //         } </h3>
-  //         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
-  //           order?.addtional_notes
-  //         }
-  //         </h3>
-  //         <div>
-  //             <h1 style="font-size: 16px;font-weight: 700;font-family: sans-serif;    margin: 10px 0 0 0;">
-  //                 Befehl Einzelheiten*</h1>
-  //             <div class="Details">
-  //                 <table style="width: 100%">
-  //                     <thead>
-  //                         <tr>
-  //                             <th style="text-align: left; font-family: sans-serif;">Qty</th>
-  //                             <th style="width: 80%;text-align: left; font-family: sans-serif;">Menge</th>
-  //                             <th style="text-align: left; font-family: sans-serif;">Preis</th>
-  //                         </tr>
-  //                     </thead>
-  //                     <tbody style="font-size: 12px;">
-  //                         ${order.order_details?.product.map(product => {
-  //                           const qty = product.qty;
-  //                           const name = product.product_details.name;
-  //                           const discountedPrice =
-  //                             product.price * (product.discount_percent / 100);
-  //                           const dressing = JSON.parse(product.dressing);
+//     <div class="print"
+//     style="border:1px solid #a1a1a1; width: 82mm; background: white;padding: 10px; margin: 0 auto; text-align: center;">
+//     <div class="top_header" style="display: flex;">
+//         <!-- yahan image ka url dal dioo shahboo -->
+//         <img src="https://xn--pizzablitzstringen-m3b.de/pizza_blitz/admin_panel/images/logo.png" style="width: 38%">
+//         <h3 style="font-size: 17px;font-family: sans-serif;margin: 54px 0 0 -20px">pizzablitzöstringen.de</h3>
+//     </div>
+//     <div class="middle-header">
+//         <h3 style="font-size: 15px;font-weight: 800;font-family: math;margin: 7px 0 0 0;">Kuhngasse 1, 76684
+//             Östringen</h3>
+//         <h3 style="    font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Östringen,
+//             Tell:0725326560-61</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">
+//             Befehl no: ${order?.id}</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+//           order?.created_at
+//         }</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Phone: +4917682540212</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Email:
+//             Jonas.bender.1@web.de</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Address:</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">Name: ${
+//           order?.Shipping_address
+//         }</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+//           order?.Shipping_address_2
+//         } ${order?.Shipping_city}</h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+//           order?.Shipping_postal_code
+//         } </h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+//           order?.Shipping_area
+//         } </h3>
+//         <h3 style="font-size: 14px;font-weight: 800;font-family: math;margin: 3px 0 0 0;">${
+//           order?.addtional_notes
+//         }
+//         </h3>
+//         <div>
+//             <h1 style="font-size: 16px;font-weight: 700;font-family: sans-serif;    margin: 10px 0 0 0;">
+//                 Befehl Einzelheiten*</h1>
+//             <div class="Details">
+//                 <table style="width: 100%">
+//                     <thead>
+//                         <tr>
+//                             <th style="text-align: left; font-family: sans-serif;">Qty</th>
+//                             <th style="width: 80%;text-align: left; font-family: sans-serif;">Menge</th>
+//                             <th style="text-align: left; font-family: sans-serif;">Preis</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody style="font-size: 12px;">
+//                         ${order.order_details?.product.map(product => {
+//                           const qty = product.qty;
+//                           const name = product.product_details.name;
+//                           const discountedPrice =
+//                             product.price * (product.discount_percent / 100);
+//                           const dressing = JSON.parse(product.dressing);
 
-  //                           return `<tr>
-  //                             <td style="text-align: left;">${qty}</td>
-  //                             <td style="text-align: left; width: 80%; font-weight: 500;font-family: sans-serif;">
-  //                                 <b>${name}</b> - <br>
+//                           return `<tr>
+//                             <td style="text-align: left;">${qty}</td>
+//                             <td style="text-align: left; width: 80%; font-weight: 500;font-family: sans-serif;">
+//                                 <b>${name}</b> - <br>
 
-  //                                 ${dressing.map(
-  //                                   item =>
-  //                                     ` <span>
-  //                                     ${item.dressing_title}
-  //                                     <br>
-  //                                 </span>`,
-  //                                 )}
+//                                 ${dressing.map(
+//                                   item =>
+//                                     ` <span>
+//                                     ${item.dressing_title}
+//                                     <br>
+//                                 </span>`,
+//                                 )}
 
-  //                             </td>
-  //                             <td style="text-align: left;"><b>€${discountedPrice}<b></td>
-  //                         </tr>`;
-  //                         })}
-  //                     </tbody>
-  //                 </table>
-  //             </div>
-  //         </div>
+//                             </td>
+//                             <td style="text-align: left;"><b>€${discountedPrice}<b></td>
+//                         </tr>`;
+//                         })}
+//                     </tbody>
+//                 </table>
+//             </div>
+//         </div>
 
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Zwischensumme:</li>
-  //                 <li style="width: 50%;text-align: right;">€${Number(
-  //                   order?.order_total_price - order?.Shipping_Cost,
-  //                 ).toFixed(2)}</li>
-  //             </ul>
-  //         </div>
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Lieferladegeräte:</li>
-  //                 <li style="width: 50%;text-align: right;">€${Number(
-  //                   order?.Shipping_Cost,
-  //                 ).toFixed(2)}</li>
-  //             </ul>
-  //         </div>
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Gesamt:</li>
-  //                 <li style="width: 50%;text-align: right;">€${Number(
-  //                   order?.order_total_price,
-  //                 ).toFixed(2)}</li>
-  //             </ul>
-  //         </div>
+//         <div class="footer">
+//             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+//                 <li style="width: 50%;text-align: left;">Zwischensumme:</li>
+//                 <li style="width: 50%;text-align: right;">€${Number(
+//                   order?.order_total_price - order?.Shipping_Cost,
+//                 ).toFixed(2)}</li>
+//             </ul>
+//         </div>
+//         <div class="footer">
+//             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+//                 <li style="width: 50%;text-align: left;">Lieferladegeräte:</li>
+//                 <li style="width: 50%;text-align: right;">€${Number(
+//                   order?.Shipping_Cost,
+//                 ).toFixed(2)}</li>
+//             </ul>
+//         </div>
+//         <div class="footer">
+//             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+//                 <li style="width: 50%;text-align: left;">Gesamt:</li>
+//                 <li style="width: 50%;text-align: right;">€${Number(
+//                   order?.order_total_price,
+//                 ).toFixed(2)}</li>
+//             </ul>
+//         </div>
 
-  //         <div class="footer">
-  //             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
-  //                 <li style="width: 50%;text-align: left;">Bezahlverfahren:</li>
-  //                 <li style="width: 50%;text-align: right;">${
-  //                   order?.payment_type
-  //                 }</li>
-  //             </ul>
-  //         </div>
-  //         <div class="footer">
-  //             <p style="margin: 10px 0 10px 0; padding: 45px; font-weight: 700;font-family: sans-serif;">Danke für
-  //                 Ihren Einkauf*</p>
-  //         </div>
+//         <div class="footer">
+//             <ul style="display: flex;list-style: none;padding: 0; font-weight: 700;font-family: sans-serif;">
+//                 <li style="width: 50%;text-align: left;">Bezahlverfahren:</li>
+//                 <li style="width: 50%;text-align: right;">${
+//                   order?.payment_type
+//                 }</li>
+//             </ul>
+//         </div>
+//         <div class="footer">
+//             <p style="margin: 10px 0 10px 0; padding: 45px; font-weight: 700;font-family: sans-serif;">Danke für
+//                 Ihren Einkauf*</p>
+//         </div>
 
-  //         <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center; height: 200px" margin-top:20px>
-  //         <Img
-  //         src="${QRCodeUrl}/${QRCODE}"
-  //         /></div>
-  //     </div>
-  // </div>
-  //     </body>
-  //     </html>`,
+//         <div id="qrcode" style="display:flex; align-itmes:center; justify-content:center; height: 200px" margin-top:20px>
+//         <Img
+//         src="${QRCodeUrl}/${QRCODE}"
+//         /></div>
+//     </div>
+// </div>
+//     </body>
+//     </html>`,
 
-  //     fileName: `Recipt_${Math.floor(Math.random() * 10000)}`,
-  //     base64: true,
-  //     // height:2000,
-  //     // width:100,
-  //   });
+//     fileName: `Recipt_${Math.floor(Math.random() * 10000)}`,
+//     base64: true,
+//     // height:2000,
+//     // width:100,
+//   });
 
-  //   await RNPrint.print({filePath: results.filePath});
-  //   setLoading(false);
-  // };
+//   await RNPrint.print({filePath: results.filePath});
+//   setLoading(false);
+// };

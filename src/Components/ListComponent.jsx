@@ -1,20 +1,20 @@
 import React from 'react';
-import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {scale} from 'react-native-size-matters';
-import {Colors} from '../../important/Colors';
-import {imageUrl} from '../../important/Urls';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { scale } from 'react-native-size-matters';
+import { Colors } from '../../important/Colors';
+import { imageUrl } from '../../important/Urls';
 import DefaultImg from '../assets/tab/deal.jpg';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { PoppinsFont } from '../Constants/fonts';
 
-export const ListComponent = ({item, onPress}) => {
+export const ListComponent = ({ item, onPress }) => {
   const productImg = item?.order_details?.product?.[0]?.product_details?.img;
   const dealImg = item?.order_details?.deals?.[0]?.deal_details?.deal_image;
 
   const productName = item?.order_details?.product?.[0]?.product_name;
   const dealName = item?.order_details?.deals?.[0]?.deal_details?.deal_name;
-  // console.log('productName', productName);
+
 
   const image_Url = productImg || dealImg;
   const pro_names = productName || dealName;
@@ -32,8 +32,8 @@ export const ListComponent = ({item, onPress}) => {
           // ? ['#EE8000', '#FF9F00']
           // : ['#00D859', '#22C55E']
         }
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 0}}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
         style={[
           styles.list,
           // {
@@ -77,11 +77,12 @@ export const ListComponent = ({item, onPress}) => {
         <View style={styles.wrapper_img}>
           <View style={styles.pro_image}>
             <Image
-              style={{height: '100%', width: '100%'}}
-              source={image_Url ? {uri: `${imageUrl}${image_Url}`} : DefaultImg}
+              style={{ height: '100%', width: '100%' }}
+              source={image_Url ? { uri: `${imageUrl}${image_Url}` } : DefaultImg}
             />
           </View>
-          <View style={{justifyContent: 'center'}}>
+          <View style={{ justifyContent: 'center' }}>
+
             <Text
               style={{
                 color: Colors.black,
@@ -90,10 +91,10 @@ export const ListComponent = ({item, onPress}) => {
                 // width: '85%'
               }}
               numberOfLines={1}
-              >
+            >
               {pro_names}
             </Text>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons
                 name="location-outline"
                 size={scale(15)}
@@ -109,11 +110,21 @@ export const ListComponent = ({item, onPress}) => {
                 {item?.Shipping_postal_code}
               </Text>
             </View>
-            <Text
-              style={{
-                fontSize: scale(14),
-                color: Colors.textBlue,
-              }}>{`€${item.order_total_price}`}</Text>
+            <View style={{ flexDirection: 'row' }}>
+              <Text
+                style={{
+                  fontSize: scale(14),
+                  color: Colors.textBlue,
+                }}>{`€${item.order_total_price}`}</Text>
+              <Text
+                style={{
+                  marginLeft:10,
+                  fontSize: scale(14),
+                  color: Colors.textBlue,
+                }}>{`Order #: ${item.id}`}</Text>
+
+            </View>
+
           </View>
         </View>
         {/* <View>
@@ -142,7 +153,7 @@ export const ListComponent = ({item, onPress}) => {
 };
 
 const styles = StyleSheet.create({
-  mainCon:{
+  mainCon: {
     backgroundColor: 'white',
     overflow: 'hidden',
     elevation: 2.5,
