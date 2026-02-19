@@ -15,6 +15,7 @@ import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LogoutModal from '../Components/Modal/LogoutModal';
+import Inventory from '../Screens/Common/Inventory';
 
 const MaterialTabs = createMaterialTopTabNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -66,6 +67,15 @@ const CompletedOrderStack = () => {
     </Stack.Navigator>
   );
 };
+const SettingsStack = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="SettingsHome" component={SettingsScreen} />
+      <Stack.Screen name="Inventory" component={Inventory} />
+    </Stack.Navigator>
+  );
+};
+
 
 export const KitchenTabs = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -177,8 +187,10 @@ export const KitchenTabs = () => {
               </View>
             ),
           }}
-          component={SettingsScreen}
+          component={SettingsStack}
         />
+
+
       </BottomTab.Navigator>
 
       <LogoutModal

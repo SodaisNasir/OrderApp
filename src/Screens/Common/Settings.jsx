@@ -107,13 +107,18 @@ const SettingsScreen = ({ navigation }) => {
 
       {
         !loader &&
-          <View style={styles.settings}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.DepartmentTittle}>Auto Print Kitchen Slip</Text>
-              <TouchableOpacity onPress={() => toggleKitchenSlip(!kitchenSlip)} style={{ backgroundColor: kitchenSlip ? 'lightgreen' : "#FA6E6E", borderRadius: 5, marginRight: 15, marginVertical: 5 }}><Text style={[styles.DepartmentTittle]}>{kitchenSlip ? "Turned On" : "Turned Off"}</Text></TouchableOpacity>
-            </View>
+        <View style={styles.settings}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.DepartmentTittle}>Auto Print Kitchen Slip</Text>
+            <TouchableOpacity onPress={() => toggleKitchenSlip(!kitchenSlip)} style={{ backgroundColor: kitchenSlip ? 'lightgreen' : "#FA6E6E", borderRadius: 5, marginRight: 15, marginVertical: 5 }}><Text style={[styles.DepartmentTittle]}>{kitchenSlip ? "Turned On" : "Turned Off"}</Text></TouchableOpacity>
           </View>
+        </View>
       }
+      <TouchableOpacity onPress={() => navigation.navigate('Inventory')} style={styles.settings}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.DepartmentTittle}>Add Inventory System</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* <View style={styles.settings}>
         <Text style={styles.DepartmentTittle}>Auto Print Order Slip</Text>

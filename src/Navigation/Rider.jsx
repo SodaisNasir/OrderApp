@@ -1,18 +1,18 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 
-import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
-import {createStackNavigator} from '@react-navigation/stack';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 // import RiderDashBoard from '../Screens/Rider/RiderDashBoard';
 import AllOrdersScreen from '../Screens/Orders/InProgressOrders';
 import SettingsScreen from '../Screens/Common/Settings';
-import {scale} from 'react-native-size-matters';
-import {Colors} from '../../important/Colors';
+import { scale } from 'react-native-size-matters';
+import { Colors } from '../../important/Colors';
 import CurrentDeliveryScreen from '../Screens/Rider/CurrentDelivery';
 import CompletedOrdersScreen from '../Screens/Orders/CompletedOrders';
 import OrderDetailsScreen from '../Screens/Common/OrderDetails';
 import RiderDashBoard from '../Screens/Rider/RiderDashBoard';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Image, StyleSheet, View} from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Image, StyleSheet, View } from 'react-native';
 import LogoutModal from '../Components/Modal/LogoutModal';
 
 const MaterialTabs = createMaterialTopTabNavigator();
@@ -21,7 +21,7 @@ const BottomTab = createBottomTabNavigator();
 
 const AllDeliveriesStack = () => {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Deliveries" component={CompletedOrdersScreen} />
       <Stack.Screen name="Order Details" component={OrderDetailsScreen} />
     </Stack.Navigator>
@@ -29,8 +29,8 @@ const AllDeliveriesStack = () => {
 };
 
 const AllRiderDeliversStack = () => {
-  return(
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Current Delivery" component={CurrentDeliveryScreen} />
       <Stack.Screen name="Order Details" component={OrderDetailsScreen} />
     </Stack.Navigator>
@@ -40,22 +40,22 @@ const AllRiderDeliversStack = () => {
 export const RiderTabs = () => {
   const [modalVisible, setModalVisible] = useState(false);
   return (
-    <View style={{position: 'relative', flex: 1}}>
+    <View style={{ position: 'relative', flex: 1 }}>
       <BottomTab.Navigator
         screenOptions={{
-          tabBarLabelStyle: {fontSize: scale(8), color: Colors.backgroundColor},
-          tabBarStyle: {backgroundColor: Colors.primary, transform: []},
+          tabBarLabelStyle: { fontSize: scale(8), color: Colors.backgroundColor },
+          tabBarStyle: { backgroundColor: Colors.primary, transform: [] },
         }}>
         <BottomTab.Screen
           name="Scanner"
           options={{
             headerShown: false,
             tabBarShowLabel: false,
-            tabBarIcon: ({color, focused}) => (
+            tabBarIcon: ({ color, focused }) => (
               <View
                 style={[
                   styles.tabbar,
-                  {backgroundColor: focused ? Colors.white : Colors.primary},
+                  { backgroundColor: focused ? Colors.white : Colors.primary },
                 ]}>
                 <Image
                   resizeMode="contain"
@@ -75,11 +75,11 @@ export const RiderTabs = () => {
           options={{
             headerShown: false,
             tabBarShowLabel: false,
-            tabBarIcon: ({color, focused}) => (
+            tabBarIcon: ({ color, focused }) => (
               <View
                 style={[
                   styles.tabbar,
-                  {backgroundColor: focused ? Colors.white : Colors.primary},
+                  { backgroundColor: focused ? Colors.white : Colors.primary },
                 ]}>
                 <Image
                   resizeMode="contain"
@@ -99,11 +99,11 @@ export const RiderTabs = () => {
           options={{
             headerShown: false,
             tabBarShowLabel: false,
-            tabBarIcon: ({color, focused}) => (
+            tabBarIcon: ({ color, focused }) => (
               <View
                 style={[
                   styles.tabbar,
-                  {backgroundColor: focused ? Colors.white : Colors.primary},
+                  { backgroundColor: focused ? Colors.white : Colors.primary },
                 ]}>
                 <Image
                   resizeMode="contain"
@@ -123,11 +123,11 @@ export const RiderTabs = () => {
           options={{
             headerShown: false,
             tabBarShowLabel: false,
-            tabBarIcon: ({color, focused}) => (
+            tabBarIcon: ({ color, focused }) => (
               <View
                 style={[
                   styles.tabbar,
-                  {backgroundColor: focused ? Colors.white : Colors.primary},
+                  { backgroundColor: focused ? Colors.white : Colors.primary },
                 ]}>
                 <Image
                   resizeMode="contain"
