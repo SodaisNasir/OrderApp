@@ -17,7 +17,7 @@ import Toast from 'react-native-toast-message';
 import { Colors } from '../../../important/Colors';
 
 const { width } = Dimensions.get('window');
-const BASE_URL = 'https://foodola.foodola.shop/Laravel/api/inventory';
+const BASE_URL = 'https://foodola.foodola.shop/Laravel/api/';
 
 const InventoryScanner = () => {
     const [isScannerActive, setIsScannerActive] = useState(false);
@@ -25,10 +25,11 @@ const InventoryScanner = () => {
     const [quantities, setQuantities] = useState({});
     const [cameraPermission, setCameraPermission] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [scanning, setScanning] = useState(false);
     const [apiLoading, setApiLoading] = useState(false);
     const device = useCameraDevice('back');
     const scanTimeout = useRef(null);
+    const lastScannedCode = useRef(null);
+    const scanCount = useRef(0);
 
     // Camera Permission
     useEffect(() => {
@@ -47,7 +48,7 @@ const InventoryScanner = () => {
             text1: text1,
             text2: text2,
             position: 'top',
-            visibilityTime: 3000,
+            visibilityTime: 2000,
         });
     };
 
@@ -55,7 +56,6 @@ const InventoryScanner = () => {
     const safeJsonParse = async (response) => {
         const text = await response.text();
         try {
-            // Check if response is HTML
             if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
                 console.error('Received HTML instead of JSON:', text.substring(0, 200));
                 return {
@@ -64,15 +64,12 @@ const InventoryScanner = () => {
                     status: response.status
                 };
             }
-            // Try to parse as JSON
             return JSON.parse(text);
         } catch (error) {
             console.error('JSON Parse Error:', error);
-            console.error('Response text:', text.substring(0, 200));
             return {
                 error: true,
                 message: 'Invalid JSON response from server',
-                raw: text.substring(0, 200)
             };
         }
     };
@@ -82,40 +79,43 @@ const InventoryScanner = () => {
         try {
             console.log('Original QR URL:', url);
 
-            // Case 1: Direct SKU like "02"
+            // Case 1: Direct SKU like "04"
             if (/^\d+$/.test(url)) {
                 console.log('Direct SKU number:', url);
                 return url;
             }
 
-            // Case 2: Foodola URL format
-            if (url.includes('foodola.foodola.shop')) {
-                const parts = url.split('/');
-                const lastPart = parts[parts.length - 1];
-                console.log('Foodola URL last part:', lastPart);
-
-                if (lastPart.includes('.')) {
-                    const sku = lastPart.split('.')[0];
-                    console.log('Extracted SKU from Foodola URL:', sku);
-                    return sku;
+            // Case 2: URL with SVG extension
+            if (url.includes('.svg')) {
+                const matches = url.match(/\/(\d+)\.svg$/);
+                if (matches && matches[1]) {
+                    console.log('Extracted SKU from SVG:', matches[1]);
+                    return matches[1];
                 }
-                return lastPart;
             }
 
-            // Case 3: qrexplore.com or other URLs - ignore
-            if (url.includes('qrexplore.com')) {
-                console.log('QR Explore URL detected, skipping');
-                return null;
+            // Case 3: Foodola URL format
+            if (url.includes('foodola.foodola.shop')) {
+                const matches = url.match(/\/(\d+)\./);
+                if (matches && matches[1]) {
+                    console.log('Extracted SKU from Foodola URL:', matches[1]);
+                    return matches[1];
+                }
             }
 
-            // Case 4: Any other URL - try to extract last part
+            // Case 4: Any URL - try to extract last part
             const parts = url.split('/');
             const lastPart = parts[parts.length - 1];
 
-            if (lastPart && !lastPart.includes('.')) {
-                return lastPart;
+            if (lastPart) {
+                const possibleSku = lastPart.split('.')[0];
+                if (/^\d+$/.test(possibleSku)) {
+                    console.log('Extracted numeric SKU:', possibleSku);
+                    return possibleSku;
+                }
             }
 
+            console.log('Could not extract valid SKU');
             return null;
         } catch (error) {
             console.log('Error extracting SKU:', error);
@@ -132,7 +132,7 @@ const InventoryScanner = () => {
             const formData = new FormData();
             formData.append('sku', sku);
 
-            const response = await fetch(`${BASE_URL}/raw_product`, {
+            const response = await fetch(`${BASE_URL}inventory/raw_product`, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -142,30 +142,31 @@ const InventoryScanner = () => {
 
             console.log('Raw Product API Status:', response.status);
 
-            // Parse response safely
             const data = await safeJsonParse(response);
 
             if (data.error) {
                 console.error('Raw Product API Error:', data);
                 return {
                     success: false,
-                    error: `Server error (${data.status || 'unknown'})`
+                    error: `Server error`
                 };
             }
 
             console.log('Raw Product API Data:', data);
 
-            if (data && data.id) {
+            // Check if data has success property with nested data
+            if (data.success && data.success.data && data.success.data.id) {
+                const productData = data.success.data;
                 return {
                     success: true,
                     product: {
-                        id: data.id,
-                        name: data.name || 'Product Name',
-                        sku: data.sku || sku,
-                        price: data.price || 0,
-                        unit_id: data.unit_id || 'pcs',
-                        unit_name: data.unit_name || 'Piece',
-                        current_stock: data.current_stock || 0,
+                        id: productData.id,
+                        name: productData.name || 'Product Name',
+                        sku: productData.sku || sku,
+                        price: productData.price || 0,
+                        unit_id: productData.unit_id || 1,
+                        unit_name: productData.unit_id === 2 ? 'Piece' : 'Unit',
+                        current_stock: productData.current_stock || 0,
                     }
                 };
             }
@@ -186,32 +187,32 @@ const InventoryScanner = () => {
         }
     };
 
-    // Submit Bulk Products API - FIXED VERSION
+    // Submit Bulk Products API
     const submitBulkProducts = async (products) => {
         try {
             setLoading(true);
             console.log('Submitting products:', products);
 
-            const response = await fetch(`${BASE_URL}/scan-products`, {
+            const response = await fetch(`${BASE_URL}inventory/scan-products`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({
-                    products: products
+                    products: JSON.stringify(products)
                 }),
             });
 
             console.log('Submit API Status:', response.status);
 
-            // Parse response safely
             const data = await safeJsonParse(response);
 
             if (data.error) {
                 console.error('Submit API Error:', data);
                 return {
                     success: false,
-                    message: `Server error (${data.status || 'unknown'})`
+                    message: `Server error`
                 };
             }
 
@@ -236,89 +237,62 @@ const InventoryScanner = () => {
 
     // Handle Product Scan
     const handleProductScan = async (scannedData) => {
-        if (scanning || apiLoading) return;
-
-        setScanning(true);
         console.log('Processing scan for:', scannedData);
-
+        setIsScannerActive(false);
         try {
-            // Skip qrexplore.com URLs
-            if (scannedData.includes('qrexplore.com')) {
-                showToast(
-                    'info',
-                    'Invalid QR',
-                    'Please scan the correct product QR code'
-                );
-                return;
-            }
-
+            // Extract SKU
             const sku = extractSkuFromUrl(scannedData);
             console.log('Extracted SKU:', sku);
 
             if (!sku) {
-                showToast(
-                    'error',
-                    'Invalid QR',
-                    'Could not extract SKU from QR code'
-                );
+                showToast('error', 'Invalid QR', 'Could not extract SKU from QR code');
                 return;
             }
 
             // Check if already in list
-            const existingProduct = scannedProducts.find(
-                (item) => item.sku === sku
-            );
+            const existingProduct = scannedProducts.find(item => item.sku === sku);
 
             if (existingProduct) {
                 showToast(
                     'error',
                     'Duplicate Product',
-                    'This product is already in your list'
+                    `${existingProduct.name} is already in your list. Please update quantity manually.`
                 );
+
+                lastScannedCode.current = null;
+                setIsScannerActive(false); // ✅ important
                 return;
             }
 
-            // Call Raw Product API
+            // Call API for new product
             const result = await fetchRawProduct(sku);
 
             if (result.success && result.product) {
-                setScannedProducts((prev) => [...prev, result.product]);
-                setQuantities((prev) => ({
+                setScannedProducts(prev => [...prev, result.product]);
+                setQuantities(prev => ({
                     ...prev,
                     [result.product.id]: 1,
                 }));
 
-                showToast(
-                    'success',
-                    'Success',
-                    `${result.product.name} added successfully`
-                );
+                showToast('success', 'Success', `${result.product.name} added successfully`);
+                setIsScannerActive(false);
+                lastScannedCode.current = null;
             } else {
-                showToast(
-                    'error',
-                    'Not Found',
-                    result.error || 'Product not found in system'
-                );
+                showToast('error', 'Not Found', result.error || 'Product not found in system');
+                setIsScannerActive(false);
+                lastScannedCode.current = null;
             }
         } catch (error) {
             console.error('Scan handling error:', error);
-            showToast(
-                'error',
-                'Error',
-                'Failed to process scan'
-            );
-        } finally {
-            setIsScannerActive(false);
-            scanTimeout.current = setTimeout(() => {
-                setScanning(false);
-            }, 1500);
+            showToast('error', 'Error', 'Failed to process scan');
+            // Scanner remains open for next scan
         }
     };
 
     // Update Quantity
     const updateQuantity = (productId, value) => {
         const numValue = parseInt(value) || 0;
-        if (numValue >= 0) {
+        if (numValue >= 1) {
             setQuantities((prev) => ({
                 ...prev,
                 [productId]: numValue,
@@ -344,25 +318,17 @@ const InventoryScanner = () => {
                         delete newQuantities[productId];
                         setQuantities(newQuantities);
 
-                        showToast(
-                            'info',
-                            'Removed',
-                            'Product removed from list'
-                        );
+                        showToast('info', 'Removed', 'Product removed from list');
                     }
                 }
             ]
         );
     };
 
-    // Submit All Products - FIXED
+    // Submit All Products
     const handleSubmit = async () => {
         if (scannedProducts.length === 0) {
-            showToast(
-                'error',
-                'Error',
-                'No products to submit'
-            );
+            showToast('error', 'Error', 'No products to submit');
             return;
         }
 
@@ -377,27 +343,15 @@ const InventoryScanner = () => {
             const response = await submitBulkProducts(productsData);
 
             if (response.success) {
-                showToast(
-                    'success',
-                    'Success',
-                    response.message || 'Products submitted successfully'
-                );
+                showToast('success', 'Success', response.message || 'Products submitted successfully');
                 setScannedProducts([]);
                 setQuantities({});
             } else {
-                showToast(
-                    'error',
-                    'Error',
-                    response.message || 'Submission failed'
-                );
+                showToast('error', 'Error', response.message || 'Submission failed');
             }
         } catch (error) {
             console.error('Submit error:', error);
-            showToast(
-                'error',
-                'Error',
-                'Failed to submit products. Please try again.'
-            );
+            showToast('error', 'Error', 'Failed to submit products. Please try again.');
         }
     };
 
@@ -405,14 +359,29 @@ const InventoryScanner = () => {
     const codeScanner = useCodeScanner({
         codeTypes: ['qr', 'ean-13', 'ean-8', 'code-128', 'code-39'],
         onCodeScanned: (codes) => {
-            if (codes.length > 0 && isScannerActive && !scanning && !apiLoading) {
+            if (codes.length > 0 && isScannerActive && !apiLoading) {
                 const scannedValue = codes[0].value;
+                const currentTime = Date.now();
+
                 console.log('QR Code detected:', scannedValue);
 
+                // Prevent duplicate scans within 1 second
+                if (lastScannedCode.current === scannedValue &&
+                    (currentTime - scanCount.current) < 1000) {
+                    console.log('Duplicate scan ignored');
+                    return;
+                }
+
+                // Update last scanned code and time
+                lastScannedCode.current = scannedValue;
+                scanCount.current = currentTime;
+
+                // Clear any existing timeout
                 if (scanTimeout.current) {
                     clearTimeout(scanTimeout.current);
                 }
 
+                // Process the scan
                 scanTimeout.current = setTimeout(() => {
                     handleProductScan(scannedValue);
                 }, 100);
@@ -434,30 +403,30 @@ const InventoryScanner = () => {
                     <Text style={styles.productName}>{item.name}</Text>
                     <View style={styles.skuContainer}>
                         <Icon name="qr-code" size={14} color="#666" />
-                        <Text style={styles.productSku}>{item.sku}</Text>
+                        <Text style={styles.productSku}>SKU: {item.sku}</Text>
                     </View>
                 </View>
             </View>
 
+            {/* Product Details Section */}
             <View style={styles.productDetails}>
-                <View style={styles.detailItem}>
-                    <Icon name="straighten" size={16} color="#666" />
-                    <Text style={styles.detailText}>
-                        Unit: {item.unit_name || 'Piece'}
-                    </Text>
+                <View style={styles.detailRow}>
+                    <Icon name="straighten" size={18} color={Colors.primary} />
+                    <Text style={styles.detailLabel}>Unit:</Text>
+                    <Text style={styles.detailValue}>{item.unit_id || 'Piece'}</Text>
                 </View>
-                <View style={styles.detailItem}>
-                    <Icon name="inventory" size={16} color="#666" />
-                    <Text style={styles.detailText}>
-                        Stock: {item.current_stock || 0}
-                    </Text>
+
+                <View style={styles.detailRow}>
+                    <Icon name="inventory" size={18} color={Colors.primary} />
+                    <Text style={styles.detailLabel}>Current Stock:</Text>
+                    <Text style={styles.detailValue}>{item.current_stock || 0}</Text>
                 </View>
+
                 {item.price > 0 && (
-                    <View style={styles.detailItem}>
-                        <Icon name="currency-rupee" size={16} color="#666" />
-                        <Text style={styles.detailText}>
-                            ₹{item.price}
-                        </Text>
+                    <View style={styles.detailRow}>
+                        <Icon name="currency-rupee" size={18} color={Colors.primary} />
+                        <Text style={styles.detailLabel}>Price:</Text>
+                        <Text style={styles.detailValue}>{item.price}</Text>
                     </View>
                 )}
             </View>
@@ -480,10 +449,12 @@ const InventoryScanner = () => {
                         <TextInput
                             style={styles.quantityInput}
                             value={String(quantities[item.id] || 1)}
-                            onChangeText={(text) => updateQuantity(item.id, text)}
+                            onChangeText={(text) => {
+                                const val = parseInt(text) || 1;
+                                updateQuantity(item.id, val);
+                            }}
                             keyboardType="numeric"
                             maxLength={4}
-                            editable={!loading}
                         />
                         <TouchableOpacity
                             style={styles.quantityBtn}
@@ -496,11 +467,7 @@ const InventoryScanner = () => {
                         </TouchableOpacity>
                     </View>
                 </View>
-                <TouchableOpacity
-                    onPress={() => removeProduct(item.id)}
-                    style={styles.removeBtn}
-                    disabled={loading}
-                >
+                <TouchableOpacity onPress={() => removeProduct(item.id)} style={styles.removeBtn}>
                     <Icon name="delete" size={22} color="#FF5252" />
                 </TouchableOpacity>
             </View>
@@ -524,12 +491,16 @@ const InventoryScanner = () => {
                     <View>
                         <Text style={styles.headerTitle}>Inventory Scanner</Text>
                         <Text style={styles.headerCount}>
-                            {scannedProducts.length} product{scannedProducts.length !== 1 ? 's' : ''}
+                            {scannedProducts.length} product{scannedProducts.length !== 1 ? 's' : ''} scanned
                         </Text>
                     </View>
                     <TouchableOpacity
                         style={[styles.scanButton, (loading || apiLoading) && styles.disabledButton]}
-                        onPress={() => setIsScannerActive(true)}
+                        onPress={() => {
+                            lastScannedCode.current = null;   // ✅ reset
+                            scanCount.current = 0;            // ✅ reset
+                            setIsScannerActive(true);
+                        }}
                         disabled={loading || apiLoading}
                     >
                         <Icon name="qr-code-scanner" size={24} color="#FFF" />
@@ -537,12 +508,14 @@ const InventoryScanner = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Scanner Modal */}
+                {/* Scanner Modal - Will stay open until manually closed */}
                 <Modal
                     visible={isScannerActive}
                     animationType="slide"
                     onRequestClose={() => {
                         setIsScannerActive(false);
+                        lastScannedCode.current = null;
+                        scanCount.current = 0;
                     }}
                 >
                     <View style={styles.scannerContainer}>
@@ -564,23 +537,32 @@ const InventoryScanner = () => {
                             <Text style={styles.scannerHint}>
                                 Place QR code inside the frame
                             </Text>
+
+                            {/* Show scanned count */}
+                            <View style={styles.scannedCountContainer}>
+                                <Icon name="check-circle" size={20} color="#4CAF50" />
+                                <Text style={styles.scannedCountText}>
+                                    {scannedProducts.length} products scanned
+                                </Text>
+                            </View>
                         </View>
 
-                        {/* Close Button */}
+                        {/* Close Button - Manually close scanner when done */}
                         <TouchableOpacity
                             style={styles.closeScannerButton}
-                            onPress={() => setIsScannerActive(false)}
+                            onPress={() => {
+                                setIsScannerActive(false);
+                                lastScannedCode.current = null;
+                            }}
                         >
                             <Icon name="close" size={30} color="#FFF" />
                         </TouchableOpacity>
 
-                        {/* Scanning Indicator */}
-                        {(scanning || apiLoading) && (
-                            <View style={styles.scanningOverlay}>
+                        {/* Processing Indicator */}
+                        {apiLoading && (
+                            <View style={styles.processingOverlay}>
                                 <ActivityIndicator size="large" color={Colors.primary} />
-                                <Text style={styles.scanningText}>
-                                    {apiLoading ? 'Fetching product...' : 'Processing...'}
-                                </Text>
+                                <Text style={styles.processingText}>Fetching product...</Text>
                             </View>
                         )}
                     </View>
@@ -588,27 +570,25 @@ const InventoryScanner = () => {
 
                 {/* Products List */}
                 {scannedProducts.length > 0 ? (
-                    <>
-                        <FlatList
-                            data={scannedProducts}
-                            renderItem={renderProductItem}
-                            keyExtractor={(item) => item.id.toString()}
-                            contentContainerStyle={styles.listContainer}
-                            showsVerticalScrollIndicator={false}
-                        />
-
-                        {/* Submit Button */}
-                        <TouchableOpacity
-                            style={[styles.submitButton, (loading || apiLoading) && styles.disabledButton]}
-                            onPress={handleSubmit}
-                            disabled={loading || apiLoading}
-                        >
-                            <Icon name="check-circle" size={24} color="#FFF" />
-                            <Text style={styles.submitButtonText}>
-                                {loading ? 'Submitting...' : `Submit (${scannedProducts.length})`}
-                            </Text>
-                        </TouchableOpacity>
-                    </>
+                    <FlatList
+                        data={scannedProducts}
+                        renderItem={renderProductItem}
+                        keyExtractor={(item) => item.id.toString()}
+                        contentContainerStyle={styles.listContainer}
+                        showsVerticalScrollIndicator={false}
+                        ListFooterComponent={
+                            <TouchableOpacity
+                                style={[styles.submitButton, loading && styles.disabledButton]}
+                                onPress={handleSubmit}
+                                disabled={loading}
+                            >
+                                <Icon name="check-circle" size={24} color="#FFF" />
+                                <Text style={styles.submitButtonText}>
+                                    {loading ? 'Submitting...' : `Submit (${scannedProducts.length})`}
+                                </Text>
+                            </TouchableOpacity>
+                        }
+                    />
                 ) : (
                     <View style={styles.emptyContainer}>
                         <Icon name="inbox" size={120} color="#E0E0E0" />
@@ -624,7 +604,6 @@ const InventoryScanner = () => {
     );
 };
 
-// Styles remain the same as before
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -739,6 +718,21 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         fontWeight: '500',
     },
+    scannedCountContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginTop: 20,
+    },
+    scannedCountText: {
+        color: '#FFF',
+        marginLeft: 8,
+        fontSize: 14,
+        fontWeight: '500',
+    },
     closeScannerButton: {
         position: 'absolute',
         top: 50,
@@ -747,21 +741,25 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         borderRadius: 30,
     },
-    scanningOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        justifyContent: 'center',
+    processingOverlay: {
+        position: 'absolute',
+        bottom: 100,
+        left: 20,
+        right: 20,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        padding: 16,
+        borderRadius: 12,
         alignItems: 'center',
     },
-    scanningText: {
+    processingText: {
         color: '#FFF',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
-        marginTop: 15,
+        marginTop: 8,
     },
     listContainer: {
         padding: 16,
-        paddingBottom: 100,
+        paddingBottom: 20,
     },
     productCard: {
         backgroundColor: '#FFF',
@@ -821,24 +819,28 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     productDetails: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
         backgroundColor: '#F8FAFD',
-        padding: 12,
         borderRadius: 12,
+        padding: 12,
         marginBottom: 12,
     },
-    detailItem: {
+    detailRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 20,
         marginVertical: 4,
     },
-    detailText: {
-        fontSize: 13,
+    detailLabel: {
+        fontSize: 14,
         color: '#2C3E50',
-        marginLeft: 6,
+        marginLeft: 8,
         fontWeight: '500',
+        width: 100,
+    },
+    detailValue: {
+        fontSize: 14,
+        color: '#1A1F36',
+        fontWeight: '600',
+        flex: 1,
     },
     productFooter: {
         flexDirection: 'row',
@@ -883,6 +885,7 @@ const styles = StyleSheet.create({
     removeBtn: {
         width: 46,
         height: 46,
+        marginTop: 15,
         borderRadius: 23,
         backgroundColor: '#FFEBEE',
         justifyContent: 'center',
@@ -893,14 +896,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: Colors.primary,
-        margin: 16,
+        marginTop: 16,
         padding: 18,
         borderRadius: 30,
         elevation: 6,
-        position: 'absolute',
-        bottom: 0,
-        left: 16,
-        right: 16,
     },
     submitButtonText: {
         color: '#FFF',

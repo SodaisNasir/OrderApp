@@ -986,7 +986,7 @@ const NewOrdersScreen = ({ navigation }) => {
                 justifyContent: 'center',
               }}
               onPress={decrement}>
-              <Text style={{ fontSize: scale(25) }}>-</Text>
+              <Text style={{ fontSize: scale(25), color: '#000' }}>-</Text>
             </TouchableOpacity>
             <View
               style={{
@@ -997,8 +997,9 @@ const NewOrdersScreen = ({ navigation }) => {
                 borderColor: '#D1D5DB',
                 alignItems: 'center',
                 justifyContent: 'center',
+                color: '#000'
               }}>
-              <Text>{time}</Text>
+              <Text style={{ color: '#000' }}>{time}</Text>
             </View>
             <TouchableOpacity
               style={{
@@ -1011,7 +1012,7 @@ const NewOrdersScreen = ({ navigation }) => {
                 justifyContent: 'center',
               }}
               onPress={incrtement}>
-              <Text style={{ fontSize: scale(20) }}>+</Text>
+              <Text style={{ fontSize: scale(20), color: '#000' }}>+</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -171,7 +171,8 @@ const styles = StyleSheet.create({
   DepartmentTittle: {
     padding: 20,
     fontSize: 17,
-    fontWeight: '600'
+    fontWeight: '600',
+    color: '#000'
   },
   settings: {
     borderBottomWidth: .5,
