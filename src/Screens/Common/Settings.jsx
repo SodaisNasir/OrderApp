@@ -116,7 +116,7 @@ const SettingsScreen = ({ navigation }) => {
       }
       <TouchableOpacity onPress={() => navigation.navigate('Inventory')} style={styles.settings}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.DepartmentTittle}>Add Inventory System</Text>
+          <Text style={styles.DepartmentTittle}>Pick Stock</Text>
         </View>
       </TouchableOpacity>
 

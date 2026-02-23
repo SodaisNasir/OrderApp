@@ -16,6 +16,7 @@ import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LogoutModal from '../Components/Modal/LogoutModal';
 import Inventory from '../Screens/Common/Inventory';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const MaterialTabs = createMaterialTopTabNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -161,28 +162,20 @@ export const KitchenTabs = () => {
         />
         <BottomTab.Screen
           name="Settings"
-          // listeners={{
-          //   tabPress: e => {
-          //     e.preventDefault();
-          //     setModalVisible(true)
-          //   },
-          // }}
           options={{
             headerShown: false,
             tabBarShowLabel: false,
-            tabBarIcon: ({ color, focused }) => (
+            tabBarIcon: ({ focused }) => (
               <View
                 style={[
                   styles.tabbar,
                   { backgroundColor: focused ? Colors.white : Colors.primary },
-                ]}>
-                <Image
-                  resizeMode="contain"
-                  style={{
-                    flex: 1,
-                    tintColor: focused ? Colors.primary : Colors.white,
-                  }}
-                  source={require('../assets/tab/logout.webp')}
+                ]}
+              >
+                <Icon
+                  name="settings"
+                  size={20}
+                  color={focused ? Colors.primary : Colors.white}
                 />
               </View>
             ),

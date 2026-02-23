@@ -28,6 +28,7 @@ const InventoryScanner = () => {
     const [apiLoading, setApiLoading] = useState(false);
     const device = useCameraDevice('back');
     const scanTimeout = useRef(null);
+    const [quantityErrors, setQuantityErrors] = useState({});
     const lastScannedCode = useRef(null);
     const scanCount = useRef(0);
 
@@ -166,6 +167,7 @@ const InventoryScanner = () => {
                         price: productData.price || 0,
                         unit_id: productData.unit_id || 1,
                         unit_name: productData.unit_id === 2 ? 'Piece' : 'Unit',
+                        unit: productData.unit || null, //
                         current_stock: productData.current_stock || 0,
                     }
                 };
@@ -190,6 +192,12 @@ const InventoryScanner = () => {
     // Submit Bulk Products API
     const submitBulkProducts = async (products) => {
         try {
+
+            if (Object.keys(quantityErrors).length > 0) {
+                showToast('error', 'Error', 'Please fix quantity errors before submitting');
+                return;
+            }
+
             setLoading(true);
             console.log('Submitting products:', products);
 
@@ -290,13 +298,36 @@ const InventoryScanner = () => {
     };
 
     // Update Quantity
-    const updateQuantity = (productId, value) => {
-        const numValue = parseInt(value) || 0;
-        if (numValue >= 1) {
-            setQuantities((prev) => ({
+    const updateQuantity = (productId, value, currentStock) => {
+
+        // Allow empty value
+        if (value === '') {
+            setQuantities(prev => ({
                 ...prev,
-                [productId]: numValue,
+                [productId]: ''
             }));
+            return;
+        }
+
+        // Store as STRING (important)
+        setQuantities(prev => ({
+            ...prev,
+            [productId]: value
+        }));
+
+        const numValue = parseFloat(value);
+
+        if (!isNaN(numValue) && numValue > currentStock) {
+            setQuantityErrors(prev => ({
+                ...prev,
+                [productId]: `Quantity (${numValue}) exceeds current stock (${currentStock})`,
+            }));
+        } else {
+            setQuantityErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[productId];
+                return newErrors;
+            });
         }
     };
 
@@ -413,7 +444,7 @@ const InventoryScanner = () => {
                 <View style={styles.detailRow}>
                     <Icon name="straighten" size={18} color={Colors.primary} />
                     <Text style={styles.detailLabel}>Unit:</Text>
-                    <Text style={styles.detailValue}>{item.unit_id || 'Piece'}</Text>
+                    <Text style={styles.detailValue}>{item?.unit?.name}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
@@ -422,55 +453,43 @@ const InventoryScanner = () => {
                     <Text style={styles.detailValue}>{item.current_stock || 0}</Text>
                 </View>
 
-                {item.price > 0 && (
+                {/* {item.price > 0 && (
                     <View style={styles.detailRow}>
                         <Icon name="currency-rupee" size={18} color={Colors.primary} />
                         <Text style={styles.detailLabel}>Price:</Text>
                         <Text style={styles.detailValue}>{item.price}</Text>
                     </View>
-                )}
+                )} */}
             </View>
 
             <View style={styles.productFooter}>
                 <View style={styles.quantityContainer}>
                     <Text style={styles.quantityLabel}>Quantity:</Text>
                     <View style={styles.quantityControls}>
-                        <TouchableOpacity
-                            style={styles.quantityBtn}
-                            onPress={() => {
-                                const newQty = (quantities[item.id] || 1) - 1;
-                                if (newQty >= 1) {
-                                    updateQuantity(item.id, newQty);
-                                }
-                            }}
-                        >
-                            <Icon name="remove" size={18} color="#FFF" />
-                        </TouchableOpacity>
+
                         <TextInput
                             style={styles.quantityInput}
-                            value={String(quantities[item.id] || 1)}
+                            value={String(quantities[item.id] ?? '')}
                             onChangeText={(text) => {
-                                const val = parseInt(text) || 1;
-                                updateQuantity(item.id, val);
+                                const cleaned = text.replace(/[^0-9.]/g, '');
+
+                                const valid = cleaned.split('.').length > 2
+                                    ? cleaned.slice(0, -1)
+                                    : cleaned;
+
+                                updateQuantity(item.id, valid, item.current_stock || 0);
                             }}
-                            keyboardType="numeric"
-                            maxLength={4}
+                            keyboardType="decimal-pad"
                         />
-                        <TouchableOpacity
-                            style={styles.quantityBtn}
-                            onPress={() => {
-                                const newQty = (quantities[item.id] || 1) + 1;
-                                updateQuantity(item.id, newQty);
-                            }}
-                        >
-                            <Icon name="add" size={18} color="#FFF" />
-                        </TouchableOpacity>
                     </View>
                 </View>
                 <TouchableOpacity onPress={() => removeProduct(item.id)} style={styles.removeBtn}>
                     <Icon name="delete" size={22} color="#FF5252" />
                 </TouchableOpacity>
             </View>
+            {quantityErrors[item.id] && (
+                <Text style={styles.quantityErrorText}>{quantityErrors[item.id]}</Text>
+            )}
         </View>
     );
 
@@ -497,7 +516,7 @@ const InventoryScanner = () => {
                     <TouchableOpacity
                         style={[styles.scanButton, (loading || apiLoading) && styles.disabledButton]}
                         onPress={() => {
-                            lastScannedCode.current = null;   // ✅ reset
+                            lastScannedCode.current = null;
                             scanCount.current = 0;            // ✅ reset
                             setIsScannerActive(true);
                         }}
@@ -507,6 +526,7 @@ const InventoryScanner = () => {
                         <Text style={styles.scanButtonText}>Scan</Text>
                     </TouchableOpacity>
                 </View>
+                {/* <TouchableOpacity onPress={handleProductScan}><Text style={{ color: '#000' }}>hdbfhfb</Text></TouchableOpacity> */}
 
                 {/* Scanner Modal - Will stay open until manually closed */}
                 <Modal
@@ -643,6 +663,12 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 30,
         elevation: 3,
+    },
+    quantityErrorText: {
+        color: '#D32F2F',
+        fontSize: 12,
+        marginTop: 4,
+        // marginLeft: 4,
     },
     scanButtonText: {
         color: '#FFF',
@@ -874,7 +900,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        width: 60,
+        width: '90%',
         textAlign: 'center',
         marginHorizontal: 8,
         fontSize: 16,
