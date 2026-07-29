@@ -315,6 +315,8 @@ import { Alert } from 'react-native';
 export const Login = (data, setLoader) => {
   return async (dispatch) => {
     try {
+
+
       const notification = await AsyncStorage.getItem('onesignaltoken');
       const formdata = new FormData();
       formdata.append('email', data.email);
@@ -335,7 +337,7 @@ export const Login = (data, setLoader) => {
       const response = await fetch(`${baseUrl}login-app`, requestOptions);
 
       // const response = await fetch(${apiUrl}login-app, requestOptions);
-      console.log('response=========login', response)
+      console.log('response=========login', JSON.stringify(response))
 
       if (response?.ok) {
         const data = await response.json();
@@ -420,21 +422,23 @@ export const getBaseUrlAPI = async (data, dispatch, setLoader) => {
     });
 
     const result = await response.json();
-    console.log('ACCOUNT API RESULT========================:', result);
+    console.log('ACCOUNT API RESULT========================:', JSON.stringify(result));
 
     if (result?.success?.status === 200 && result?.success?.data?.base_url) {
+
+     
+
       const baseUrl = `${result.success.data.base_url}/Laravel/api/`;
       const PdfBaseUrl = `${result.success.data.base_url}`;
+
+
+     
 
       await AsyncStorage.setItem('baseUrl', baseUrl);
       await AsyncStorage.setItem('PdfBaseUrl', PdfBaseUrl);
       const AuthDetails = JSON.stringify(result.success.data);
       await AsyncStorage.setItem('AuthDetails', AuthDetails);
   
-
-
-
-
 
       dispatch({
         type: 'GETACCOUNT',

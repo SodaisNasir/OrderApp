@@ -308,9 +308,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     // receiptText += '[L]\n';
     receiptText += `[C]Email: <b><font size='normal'>${orderData.email}</font></b>\n`;
     // receiptText += '[L]\n';
-    receiptText += `[C]<p>Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
+    receiptText += `[C]Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
     // receiptText += '[L]\n';
-    receiptText += `[C]<p>Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
+    receiptText += `[C]Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
     // receiptText += '[L]\n';
     // receiptText += `[C]<b></b>\n`;
     // receiptText += '[L]\n';
@@ -329,8 +329,18 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     receiptText += '------------------------------------------------\n';
 
     orderData.items.forEach((item, idx) => {
-      receiptText += `[L]<b>x${item.qty}     ${item.name
-        } [R]${item.price.toFixed(2)}</b>\n`;
+
+
+      const maxChars = 38;
+
+      let name = item.name;
+      let firstLine = name.substring(0, maxChars);
+      let secondLine = name.substring(maxChars);
+
+      receiptText += `[L]<b>x${item.qty} ${firstLine} [R]${item.price.toFixed(2)}</b>\n`;
+      if (secondLine.length > 0) {
+        receiptText += `[L]   ${secondLine}\n`; // spaces to align under name
+      }
       receiptText += '[L]\n';
 
       addonData[idx]?.addons?.forEach(addon => {
@@ -418,7 +428,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
     receiptText += '================================================\n\n';
     receiptText += `[C]<b><font size='big'>Vielen Dank!</font></b>\n\n`;
-    receiptText += `[L]<qrcode size='20'>${order?.id}</qrcode>\n`;
+    receiptText += `[L]<qrcode size='70'>${order?.id}</qrcode>\n`;
     receiptText += `\n\n`;
 
     try {

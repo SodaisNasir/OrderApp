@@ -82,9 +82,12 @@ const NewOrdersScreen = ({ navigation }) => {
   };
 
   const connectToPussher = async pusher => {
+   
     try {
       const AuthDetails = await AsyncStorage.getItem('AuthDetails')
       const Data = JSON.parse(AuthDetails);
+     
+
       await pusher.init({
         apiKey: 'a1964c3ac950c1a0cdf5',
         cluster: 'mt1',
@@ -92,7 +95,7 @@ const NewOrdersScreen = ({ navigation }) => {
       await pusher.subscribe({
         channelName: Data.channel_1,
         onEvent: event => {
-          // console.log('Ye Chal Raha ha');
+          console.log('Ye Chal Raha ha');
           console.log(`Got channel event: ${event.data}`);
           if (event.eventName === 'new_order') {
             dispatch(getOrders('neworder'));
@@ -216,32 +219,17 @@ const NewOrdersScreen = ({ navigation }) => {
   // }, []);
 
   const handleTogglePrint = async () => {
-
+    if (!selectedMac) {
+            Toast.show('You will need to select the printer!', Toast.SHORT);
+            return;
+        
+    }
     setIsPrintingEnabled(prev => {
       const nextValue = !prev;
 
       if (nextValue) {
         (async () => {
-          const connectedPrinter =
-            await RNBluetoothClassic.isBluetoothEnabled();
-          if (!connectedPrinter) {
-            Toast.show('Bluetooth is currently disabled', Toast.SHORT);
-            await RNBluetoothClassic.requestBluetoothEnabled();
-            setModalVisible(true);
-            return;
-          }
-
-          // if (!selectedMac) {
-          //   // Try to load from storage again (edge case)
-          //   const savedMac = await AsyncStorage.getItem('selectedPrinterMac');
-          //   if (savedMac) {
-          //     setSelectedMac(savedMac);
-          //   } else {
-          //     setModalVisible(true); // Still not found
-          //     return;
-          //   }
-          // }
-
+          
           const unprintedOrders = orders?.filter(
             o =>
               !printedOrderIdsRef.current.includes(o.id) &&
@@ -249,7 +237,7 @@ const NewOrdersScreen = ({ navigation }) => {
           );
 
           if (unprintedOrders?.length > 0) {
-            const firstOrder = unprintedOrders[0];
+            const firstOrder = unprintedOrders[unprintedOrders?.length - 1];
             console.log('Immediately printing first order:', firstOrder.id);
             autoPrintOrder(firstOrder);
           }
@@ -259,6 +247,20 @@ const NewOrdersScreen = ({ navigation }) => {
       return nextValue;
     });
   };
+
+  const OpenModalForPrinter = async () => {
+    const connectedPrinter =
+     await RNBluetoothClassic.isBluetoothEnabled();
+        if (!connectedPrinter) {
+          Toast.show('Bluetooth is currently disabled', Toast.SHORT);
+          await RNBluetoothClassic.requestBluetoothEnabled();
+          setModalVisible(true);
+          return;
+        }else{
+          setModalVisible(true)
+        }
+
+  }
 
   const getinitialData = async () => {
     const departmentsData = await AsyncStorage.getItem('Departments');
@@ -421,7 +423,7 @@ const NewOrdersScreen = ({ navigation }) => {
     }
   };
 
-
+  
   const printKitchenReceipt = async (order, depatment) => {
 
     const items = order.order_details?.product?.map(product => ({
@@ -723,9 +725,9 @@ const NewOrdersScreen = ({ navigation }) => {
     // receiptText += '[L]\n';
     receiptText += `[C]Email: <b><font size='normal'>${orderData.email}</font></b>\n`;
     // receiptText += '[L]\n';
-    receiptText += `[C]<p>Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
+    receiptText += `[C]Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
     // receiptText += '[L]\n';
-    receiptText += `[C]<p>Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
+    receiptText += `[C]Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
     // receiptText += '[L]\n';
     // receiptText += `[C]<b></b>\n`;
     // receiptText += '[L]\n';
@@ -744,8 +746,18 @@ const NewOrdersScreen = ({ navigation }) => {
     receiptText += '------------------------------------------------\n';
 
     orderData.items.forEach((item, idx) => {
-      receiptText += `[L]<b>x${item.qty}     ${item.name
-        } [R]${item.price.toFixed(2)}</b>\n`;
+       const maxChars = 38;
+
+      let name = item.name;
+      let firstLine = name.substring(0, maxChars);
+      let secondLine = name.substring(maxChars);
+
+
+
+      receiptText += `[L]<b>x${item.qty} ${firstLine} [R]${item.price.toFixed(2)}</b>\n`;
+      if (secondLine.length > 0) {
+        receiptText += `[L]   ${secondLine}\n`; // spaces to align under name
+      }
       receiptText += '[L]\n';
 
       addonData[idx]?.addons?.forEach(addon => {
@@ -956,7 +968,7 @@ const NewOrdersScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => setModalVisible(true)}
+          onPress={() =>  OpenModalForPrinter()}
           style={styles.down}>
           <Text style={{ color: Colors.white }}> {selectedMac ? selectedMac?.name : 'Select Printer'}</Text>
           <Feather name={'printer'} size={20} color={Colors.white} />

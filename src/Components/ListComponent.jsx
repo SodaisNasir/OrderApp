@@ -15,12 +15,16 @@ export const ListComponent = ({ item, onPress }) => {
   const productName = item?.order_details?.product?.[0]?.product_name;
   const dealName = item?.order_details?.deals?.[0]?.deal_details?.deal_name;
 
+  const custName = item?.userDetails?.name;
+  let phone = item?.userDetails?.phone;
 
+  if (phone) {
+   phone = phone.replace(/^\+49/, '');
+  }
   const image_Url = productImg || dealImg;
   const pro_names = productName || dealName;
 
 
-  // console.log('item?.payment_status', item?.payment_status)
   return (
     <TouchableOpacity onPress={onPress} style={styles.mainCon} activeOpacity={0.6}>
       <LinearGradient
@@ -72,7 +76,7 @@ export const ListComponent = ({ item, onPress }) => {
                 item.payment_status == 'unpaid' ? Colors.secondary : '#0E6147',
             },
           ]}>
-          <Text style={styles.id_text}>{item?.payment_status}</Text>
+          <Text style={styles.id_text}>{item?.payment_type}</Text>
         </View>
         <View style={styles.wrapper_img}>
           <View style={styles.pro_image}>
@@ -87,12 +91,12 @@ export const ListComponent = ({ item, onPress }) => {
               style={{
                 color: Colors.black,
                 fontSize: 14,
-                fontFamily: PoppinsFont.Poppins600,
+                fontFamily: PoppinsFont.Poppins400,
                 // width: '85%'
               }}
               numberOfLines={1}
             >
-              {pro_names}
+              Cxt: {custName},  +49{phone}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons
