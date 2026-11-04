@@ -266,95 +266,118 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       };
     });
 
-    const orderData = {
-      orderNo: order?.id,
-      date: order?.created_at,
-      phone: order?.userDetails?.phone,
-      email: order?.userDetails?.email,
-      name: order?.userDetails?.name,
-      shipping: order?.Shipping_address_2,
-      city: order?.Shipping_city,
-      postal: order?.Shipping_postal_code,
-      shipping_address: order?.Shipping_address,
-      shipping_area: order?.Shipping_area,
-      add_notes: order?.addtional_notes,
-      items,
-      paymentMethod: order?.payment_type,
-      subtotal: Number(combinedSubtotal).toFixed(2),
-      discount: Number(order?.total_discount).toFixed(2),
-      delivery: Number(order?.Shipping_Cost).toFixed(2),
-      tax7: Number(order?.total_netto_tax).toFixed(2),
-      tax19: Number(order?.total_metto_tax).toFixed(2),
-      total: Number(order?.order_total_price) + Number(order?.Shipping_Cost),
-      qrCode: order?.qr_code
-    };
+    const AuthDetails = await AsyncStorage.getItem('AuthDetails');
+    const Data = AuthDetails ? JSON.parse(AuthDetails) : {};
 
+    // Customer Info (Handling both Registered & Guest users)
+    const customerName =
+      order?.userDetails?.name ||
+      order?.Shipping_address ||
+      order?.customer_name ||
+      order?.name ||
+      order?.user_name ||
+      'Guest';
 
-    const AuthDetails = await AsyncStorage.getItem('AuthDetails')
-    const Data = JSON.parse(AuthDetails);
+    const customerPhone =
+      order?.userDetails?.phone ||
+      order?.phone ||
+      order?.user_phone ||
+      order?.contact ||
+      order?.shipping_phone ||
+      '';
+
+    let addressParts = [];
+    if (order?.Shipping_address_2) {
+      addressParts.push(order.Shipping_address_2);
+    }
+    const cityPostal = [order?.Shipping_postal_code, order?.Shipping_city].filter(Boolean).join(' - ');
+    if (cityPostal) {
+      addressParts.push(cityPostal);
+    }
+    const formattedAddress = addressParts.join(' ') || order?.Shipping_address_2 || order?.Shipping_city || 'N/A';
+
+    const ringerName = order?.Shipping_area || '';
+    const orderType = order?.order_type === 'pickup' ? 'Pickup' : 'Delivery';
+    const deliveryTime = order?.delivery_time || order?.order_time || order?.delivery_date || '';
+    const orderTypeStr = deliveryTime ? `${orderType} @ ${deliveryTime}` : orderType;
+
+    const paymentMethod =
+      order?.payment_type?.toLowerCase() === 'cash'
+        ? 'Cash'
+        : order?.payment_type
+          ? order.payment_type.charAt(0).toUpperCase() + order.payment_type.slice(1)
+          : 'Cash';
+
+    // Amounts & Breakdown
+    const delivery = parseFloat(order?.Shipping_Cost || 0);
+    const discount = parseFloat(order?.total_discount || 0);
+    const total = parseFloat(order?.order_total_price || 0);
+    const tax7 = parseFloat(order?.total_netto_tax || 0);
+    const tax19 = parseFloat(order?.total_metto_tax || 0);
+    const actualPrice = combinedSubtotal > 0 ? combinedSubtotal : Math.max(0, total - delivery + discount);
+
+    const shopName = Data?.name || Data?.url || 'Foodola';
+    const shopAddress = Data?.address || '';
+    const shopPhone = Data?.phone || '';
 
     let receiptText = '';
-    receiptText += `[C]<b><font size='tall'>${Data.url}</font></b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]${Data.address}\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Tel: ${Data.phone}\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Bestellung Nr: ${orderData.orderNo}\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Datum: ${orderData.date}\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Telefon: <b><font size='normal'>${orderData.phone}</font></b>\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Email: <b><font size='normal'>${orderData.email}</font></b>\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Adress: <b><font size='normal'>${orderData.shipping}-${orderData.city}</font></b>\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Name: <b><font size='normal'>${orderData.name}</font></b>\n`;
-    // receiptText += '[L]\n';
-    // receiptText += `[C]<b></b>\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]<b><font size='normal'>${orderData.postal}</font></b>\n`;
-    receiptText += '[L]\n';
-    receiptText += `[C]<b>Zahlungsmodus:<font size='normal'>${orderData.payment_type === "cash" ? "Barzahlung" : "Online-Zahlung"}</font></b>\n`;
-    receiptText += `[C]<b>Auftragsart:<font size='normal'>${orderData.order_type === "delivery" ? "Lieferung" : "Abholen"}</font></b>\n`;
-    // receiptText += `[C]<b>${orderData.shipping_area}</b>\n`;
-    // receiptText += '[L]\n';
-    // receiptText += `[C]<b>${orderData.add_notes || ''}</b>\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[C]Befehl Einzelheiten*\n`;
-    // receiptText += '[L]\n';
+    receiptText += `[C]<b><font size='tall'>${shopName}</font></b>\n`;
+    if (shopAddress) {
+      receiptText += `[C]${shopAddress}\n`;
+    }
+    if (shopPhone) {
+      receiptText += `[C]Tel: ${shopPhone}\n`;
+    }
+    receiptText += `[C]<b>Order#: ${order?.id}</b>\n`;
     receiptText += '------------------------------------------------\n';
-    receiptText += `<b><font size='tall'>Menge    Produkt                          Preis</font></b> \n`;
+    if (order?.created_at) {
+      receiptText += `[C]${order.created_at}\n`;
+    }
+    if (customerPhone) {
+      receiptText += `[C]<b>${customerPhone}</b>\n`;
+    }
+    if (customerName) {
+      receiptText += `[C]<b>${customerName}</b>\n`;
+    }
+    if (formattedAddress) {
+      receiptText += `[C]Address: ${formattedAddress}\n`;
+    }
+    if (ringerName) {
+      receiptText += `[C]Ringer name: ${ringerName}\n`;
+    }
+    receiptText += `[C]Order type: ${orderTypeStr}\n`;
+    receiptText += `[C]Payment method: ${paymentMethod}\n`;
     receiptText += '------------------------------------------------\n';
 
-    orderData.items.forEach((item, idx) => {
+    receiptText += `[C]<b><font size='normal'>Order details</font></b>\n`;
+    receiptText += '------------------------------------------------\n';
+    receiptText += `<b>CROWD  ARTICLE                                 PRICE</b>\n`;
+    receiptText += '------------------------------------------------\n';
 
-
-      const maxChars = 38;
-
+    items.forEach((item, idx) => {
+      const maxChars = 30;
       let name = item.name;
       let firstLine = name.substring(0, maxChars);
       let secondLine = name.substring(maxChars);
 
-      receiptText += `[L]<b>x${item.qty} ${firstLine} [R]${item.price.toFixed(2)}</b>\n`;
+      receiptText += `[L]<b>x${item.qty}    ${firstLine}[R]€${item.price.toFixed(2)}</b>\n`;
       if (secondLine.length > 0) {
-        receiptText += `[L]   ${secondLine}\n`; // spaces to align under name
+        receiptText += `[L]        ${secondLine}\n`;
       }
       receiptText += '[L]\n';
 
       addonData[idx]?.addons?.forEach(addon => {
-        receiptText += `[L]        <b>x${addon.quantity} ${addon.name}</b>\n`;
+        receiptText += `[L]        <b>+ x${addon.quantity} ${addon.name}</b>\n`;
         receiptText += '[L]\n';
       });
 
       addonData[idx]?.types?.forEach(type => {
-        if (type.name) receiptText += `[L]        <b>${type.name}</b>\n`;
+        if (type.name) receiptText += `[L]        <b>+ ${type.name}</b>\n`;
         receiptText += '[L]\n';
       });
 
       addonData[idx]?.dressing?.forEach(d => {
-        if (d.name) receiptText += `[L]        <b>${d.name}</b>\n`;
+        if (d.name) receiptText += `[L]        <b>+ ${d.name}</b>\n`;
         receiptText += '[L]\n';
       });
 
@@ -366,38 +389,34 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         const dealInfo = deal.deal_details;
         const dealProducts = deal.deal_product;
 
-        receiptText += `[L]<b>${dealInfo.deal_name} [R]${parseFloat(
-          dealInfo.deal_price,
+        receiptText += `[L]<b>${dealInfo.deal_name}[R]€${parseFloat(
+          dealInfo.deal_price || 0,
         ).toFixed(2)}</b>\n`;
         receiptText += '[L]\n';
 
-        dealProducts.forEach((product, productIndex) => {
-          receiptText += `[L]<b>${product.product_name}</b>\n`;
+        dealProducts?.forEach((product, productIndex) => {
+          receiptText += `[L]<b>  ${product.product_name}</b>\n`;
           receiptText += '[L]\n';
 
-          // Addons
           if (product.addons?.length) {
             product.addons.forEach(addon => {
-              // const price = addon.as_price === "0" || addon.isFreeInDeal === "1" ? "Free" : `${parseFloat(addon.as_price).toFixed(2)}`;
-              receiptText += `[L]        <b>x${addon.quantity} ${addon.as_name}</b>\n`;
+              receiptText += `[L]        <b>+ x${addon.quantity} ${addon.as_name}</b>\n`;
               receiptText += '[L]\n';
             });
           }
 
-          // Types
           const types = JSON.parse(product.types || '[]');
           if (types.length) {
             types.forEach(t => {
-              receiptText += `[L]        <b>${t.ts_name}\n</b>`;
+              receiptText += `[L]        <b>+ ${t.ts_name}</b>\n`;
               receiptText += '[L]\n';
             });
           }
 
-          // Dressing
           const dressing = JSON.parse(product.dressing || '[]');
           if (dressing.length) {
             dressing.forEach(d => {
-              receiptText += `[L]        <b>${d.dressing_name}</b>\n`;
+              receiptText += `[L]        <b>+ ${d.dressing_name}</b>\n`;
               receiptText += '[L]\n';
             });
           }
@@ -408,43 +427,39 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         receiptText += '------------------------------------------------\n';
       });
     }
-    receiptText += '[L]\n';
-    receiptText += `[L]<b>Zwischensumme:</b> [R]<b>${orderData.subtotal}</b>\n\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[L]<b>Rabatt:</b> [R]<b>${orderData.discount}</b>\n\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[L]<b>Lieferung:</b> [R]<b>${orderData.delivery}</b>\n\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[L]<b>MwSt. (7%):</b> [R]<b>${orderData.tax7}</b>\n\n`;
-    // receiptText += '[L]\n';
-    receiptText += `[L]<b>MwSt. (19%):</b> [R]<b>${orderData.tax19}</b>\n\n`;
-    // receiptText += '[L]\n';
+
+    receiptText += `[L]<b>Actual price:</b>[R]<b>€${actualPrice.toFixed(2)}</b>\n`;
+    receiptText += `[L]<b>Discount:</b>[R]<b>${discount > 0 ? `-${discount.toFixed(2)} €` : `€0.00`}</b>\n`;
+    receiptText += `[L]<b>Delivery:</b>[R]<b>€${delivery.toFixed(2)}</b>\n`;
+    receiptText += `[L]<b>VAT (7%):</b>[R]<b>€${tax7.toFixed(2)}</b>\n`;
+    receiptText += `[L]<b>VAT (19%):</b>[R]<b>€${tax19.toFixed(2)}</b>\n`;
     receiptText += '------------------------------------------------\n';
-    // receiptText += '[L]\n';
-    receiptText += `[L]<b>Gesamt:</b> [R]<b>${orderData.total}</b>\n\n`;
-
-    receiptText += `[L]<b>Zahlungsmethode:</b> [R]<b>${orderData.paymentMethod}</b>\n\n`;
-    // receiptText += '[L]\n';
-
+    receiptText += `[L]<b><font size='tall'>In total:</font></b>[R]<b><font size='tall'>€${total.toFixed(2)}</font></b>\n`;
     receiptText += '================================================\n\n';
-    receiptText += `[C]<b><font size='big'>Vielen Dank!</font></b>\n\n`;
-    receiptText += `[L]<qrcode size='70'>${order?.id}</qrcode>\n`;
-    receiptText += `\n\n`;
+    receiptText += `[C]<b><font size='normal'>Thank you for your purchase!</font></b>\n\n`;
+    receiptText += `[C]<qrcode size='70'>${order?.id}</qrcode>\n\n\n`;
+
+    console.log('=== RECEIPT PREVIEW ===\n', receiptText);
 
     try {
+      const printerMac =
+        selectedMac?.address ||
+        selectedMac ||
+        (await AsyncStorage.getItem('selectedPrinterMac'));
+
       const result = await ThermalPrinter.printBluetooth({
         payload: receiptText,
-        macAddress: selectedMac,
+        macAddress: printerMac,
         printerWidthMM: 80,
         printerNbrCharactersPerLine: 48,
         autoCut: true,
       });
       Toast.show('Your order has been printed successfully.', Toast.SHORT);
-      setLoading(false)
-      setLoading2(false)
+      setLoading(false);
+      setLoading2(false);
     } catch (err) {
       setLoading(false);
-      setLoading2(false)
+      setLoading2(false);
       console.log('Failed to print:', err);
     }
   };
