@@ -10,6 +10,7 @@ import OrderDetailsScreen from '../Screens/Common/OrderDetails';
 import SettingsScreen from '../Screens/Common/Settings';
 import InProgressOrdersScreen from '../Screens/Orders/InProgressOrders';
 import NewOrderDetail from '../Screens/Common/NewOrderDetail';
+import NumpadScreen from '../Screens/Orders/NumpadScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { useDispatch } from 'react-redux';
@@ -40,6 +41,7 @@ const NewOrderStack = () => {
         // options={(focused)=>}
         component={NewOrderDetail}
       />
+      <Stack.Screen name="Numpad" component={NumpadScreen} />
     </Stack.Navigator>
   );
 };
@@ -73,6 +75,7 @@ const SettingsStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SettingsHome" component={SettingsScreen} />
       <Stack.Screen name="Inventory" component={Inventory} />
+      <Stack.Screen name="Numpad" component={NumpadScreen} />
     </Stack.Navigator>
   );
 };

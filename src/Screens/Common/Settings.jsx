@@ -120,6 +120,12 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => navigation.navigate('Numpad')} style={styles.settings}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.DepartmentTittle}>Numpad</Text>
+        </View>
+      </TouchableOpacity>
+
       {/* <View style={styles.settings}>
         <Text style={styles.DepartmentTittle}>Auto Print Order Slip</Text>
       </View> */}
