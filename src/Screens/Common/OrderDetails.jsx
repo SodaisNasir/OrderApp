@@ -519,8 +519,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   Order Details
                 </Text>
                 <FlatList
-                  style={{ height: '100%' }}
-                  showsVerticalScrollIndicator={true}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
                   data={order.order_details?.product}
                   contentContainerStyle={{ paddingHorizontal: 1 }}
                   renderItem={({ item }) => {
@@ -573,7 +573,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                             <Image
                               style={{ height: '100%', width: '100%' }}
                               source={{
-                                uri: `${imageUrl}${item.product_details.img}`,
+                                uri: `${imageUrl}${item?.product_details?.img}`,
                               }}
                             />
                           </View>
@@ -583,11 +583,11 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                               style={{
                                 fontSize: scale(10),
                               }}>
-                              {item.product_details.name}
+                              {item?.product_details?.name}
                             </Text>
 
                             {item.addons &&
-                              JSON.parse(item.addons).length > 0 && (
+                              (JSON.parse(item.addons) || []).length > 0 && (
                                 <>
                                   <Text
                                     style={{
@@ -601,7 +601,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                                       marginLeft: scale(5),
                                       width: scale(80),
                                     }}>
-                                    {JSON.parse(item.addons).map(item => (
+                                    {(JSON.parse(item.addons) || []).map(item => (
                                       <View
                                         style={{
                                           flexDirection: 'row',
@@ -730,8 +730,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   </View>
 
                   <FlatList
+                    scrollEnabled={false}
                     data={order.order_details?.deals[0]?.deal_product}
-                    // style={{height: '100%'}}
                     renderItem={({ item }) => {
                       return (
                         <>
@@ -764,7 +764,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                                 <Image
                                   style={{ height: '100%', width: '100%' }}
                                   source={{
-                                    uri: `${imageUrl}${item.product_details.img}`,
+                                    uri: `${imageUrl}${item?.product_details?.img}`,
                                   }}
                                 />
                               </View>
@@ -774,7 +774,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                                   style={{
                                     fontSize: scale(10),
                                   }}>
-                                  {item.product_details.name}
+                                  {item?.product_details?.name}
                                 </Text>
 
                                 {item.addons &&
