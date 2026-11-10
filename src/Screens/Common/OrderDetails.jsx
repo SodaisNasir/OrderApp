@@ -529,9 +529,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     const newDiscountedPrice = item.price + discountAmount;
 
                     // Parse extras
-                    const addons = JSON.parse(item.addons || '[]');
-                    const types = JSON.parse(item.types || '[]');
-                    const dressings = JSON.parse(item.dressing || '[]');
+                    const addons = JSON.parse(item.addons || '[]') || [];
+                    const types = JSON.parse(item.types || '[]') || [];
+                    const dressings = JSON.parse(item.dressing || '[]') || [];
                     // Calculate totals
                     const addonTotal = addons.reduce((sum, a) => sum + parseFloat(a.as_price || 0), 0);
                     const typeTotal = types.reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
