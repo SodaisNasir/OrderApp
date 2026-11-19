@@ -21,6 +21,7 @@ import {
 } from '../../Redux/Reducers/Actions';
 import { ListComponent } from '../../Components/ListComponent';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Toast from 'react-native-simple-toast';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
 import ThermalPrinter from 'react-native-thermal-printer';
@@ -81,19 +82,76 @@ const NewOrdersScreen = ({ navigation }) => {
     });
   };
 
-  const connectToPussher = async pusher => {
-   
+  const [pusherConnected, setPusherConnected] = useState(false);
+  const isPusherInitializedRef = useRef(false);
+  const reconnectTimeoutRef = useRef(null);
+  const currentChannelRef = useRef(null);
+
+  const attemptReconnect = useCallback(() => {
+    if (!isPusherInitializedRef.current) {
+      return;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    reconnectTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (!isPusherInitializedRef.current) {
+          return;
+        }
+        const pusher = Pusher.getInstance();
+        console.log('[Pusher] Auto-reconnecting, state:', pusher.connectionState);
+        if (pusher.connectionState !== 'CONNECTED') {
+          await pusher.connect();
+        }
+      } catch (err) {
+        console.log('[Pusher] Auto-reconnect failed:', err);
+      }
+    }, 2500);
+  }, []);
+
+  const connectToPussher = useCallback(async () => {
     try {
-      const AuthDetails = await AsyncStorage.getItem('AuthDetails')
+      const pusher = Pusher.getInstance();
+      const AuthDetails = await AsyncStorage.getItem('AuthDetails');
+      if (!AuthDetails) {
+        console.log('No AuthDetails found in storage');
+        return;
+      }
       const Data = JSON.parse(AuthDetails);
 
       console.log('Pusher Data:', Data);
-     
+      if (!Data?.channel_1) {
+        console.log('No channel_1 in AuthDetails');
+        return;
+      }
+
+      currentChannelRef.current = Data.channel_1;
 
       await pusher.init({
         apiKey: 'a1964c3ac950c1a0cdf5',
         cluster: 'mt1',
+        onConnectionStateChange: (currentState, previousState) => {
+          console.log(`Pusher state: ${previousState} -> ${currentState}`);
+          if (currentState === 'CONNECTED') {
+            setPusherConnected(true);
+          } else if (currentState === 'DISCONNECTED') {
+            setPusherConnected(false);
+            if (isPusherInitializedRef.current && previousState === 'CONNECTED') {
+              attemptReconnect();
+            }
+          } else {
+            setPusherConnected(false);
+          }
+        },
+        onError: (message, code, e) => {
+          console.log(`Pusher error [${code}]: ${message}`, e);
+          setPusherConnected(false);
+        },
       });
+
+      isPusherInitializedRef.current = true;
+
       await pusher.subscribe({
         channelName: Data.channel_1,
         onEvent: event => {
@@ -109,16 +167,72 @@ const NewOrdersScreen = ({ navigation }) => {
       await pusher.connect();
     } catch (error) {
       console.log('connectToPussher error:', error);
+      setPusherConnected(false);
+    }
+  }, [dispatch, attemptReconnect]);
+
+  const handlePusherPress = async () => {
+    const pusher = Pusher.getInstance();
+    if (pusherConnected) {
+      Toast.show('Pusher is connected', Toast.SHORT);
+      return;
+    }
+
+    Toast.show('Connecting to server...', Toast.SHORT);
+    try {
+      if (isPusherInitializedRef.current) {
+        await pusher.connect();
+      } else {
+        await connectToPussher();
+      }
+    } catch (e) {
+      console.log('Direct connect failed:', e);
+      try {
+        await connectToPussher();
+      } catch (err2) {
+        Toast.show('Connection failed. Retrying...', Toast.SHORT);
+      }
     }
   };
 
   useEffect(() => {
-    const pusher = Pusher.getInstance();
-    connectToPussher(pusher);
-    return async () => {
-      await pusher.unsubscribe({ channelName: 'orders' });
-      await pusher.disconnect();
+    connectToPussher();
+
+    const watchdog = setInterval(() => {
+      try {
+        if (!isPusherInitializedRef.current) {
+          return;
+        }
+        const p = Pusher.getInstance();
+        if (p.connectionState === 'CONNECTED') {
+          setPusherConnected(true);
+        } else if (p.connectionState === 'DISCONNECTED') {
+          setPusherConnected(false);
+          attemptReconnect();
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 25000);
+
+    return () => {
+      clearInterval(watchdog);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (isPusherInitializedRef.current) {
+        try {
+          const pusher = Pusher.getInstance();
+          if (currentChannelRef.current) {
+            pusher.unsubscribe({ channelName: currentChannelRef.current }).catch(() => {});
+          }
+          pusher.disconnect().catch(() => {});
+        } catch (e) {
+          // ignore
+        }
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const incrtement = () => {
@@ -154,6 +268,17 @@ const NewOrdersScreen = ({ navigation }) => {
       }
       setIsRefreshing(false);
       fetchDevices();
+
+      try {
+        if (isPusherInitializedRef.current) {
+          const pusher = Pusher.getInstance();
+          if (pusher.connectionState === 'CONNECTED') {
+            setPusherConnected(true);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
     }, []),
   );
 
@@ -893,8 +1018,37 @@ const NewOrdersScreen = ({ navigation }) => {
     <View style={styles.container}>
       {/* <CustomButton title="Click" onPress={printReceipt} /> */}
 
+      <View style={styles.headerBar}>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle}>New Orders</Text>
+          {orders?.length > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{orders.length}</Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handlePusherPress}
+          style={[
+            styles.pusherStatusBtn,
+            pusherConnected ? styles.pusherBtnConnected : styles.pusherBtnDisconnected,
+          ]}>
+          <MaterialIcons
+            name="cable"
+            size={18}
+            color="#fff"
+          />
+          <Text style={styles.pusherStatusText}>
+            {pusherConnected ? 'Connected' : 'Disconnected'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         style={{ flex: 1, marginTop: verticalScale(10) }}
+        contentContainerStyle={styles.ordersListContent}
         data={orders}
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
@@ -935,84 +1089,56 @@ const NewOrdersScreen = ({ navigation }) => {
           </View>
         }
       />
-      <View style={styles.print_button}>
-        <TouchableOpacity onPress={handleTogglePrint} style={styles.up}>
-          <Text
-            style={{
-              color: isPrintingEnabled ? Colors.lightprimary : Colors.white,
-            }}>
-            {
-              !selectedMac
-                ? "No Printer Selected"
+
+      <View style={styles.bottomControlPanel}>
+        <View style={styles.printerButtonsRow}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleTogglePrint}
+            style={styles.printerActionBtn}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.printerBtnText,
+                { color: isPrintingEnabled ? Colors.lightprimary : Colors.white },
+              ]}>
+              {!selectedMac
+                ? 'No Printer Selected'
                 : isPrintingEnabled
-                  ? "Auto Print Enabled"
-                  : "Auto Print Disabled"
-            }
-          </Text>
-          <Feather
-            name={'printer'}
-            size={20}
-            color={isPrintingEnabled ? Colors.lightprimary : Colors.white}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() =>  OpenModalForPrinter()}
-          style={styles.down}>
-          <Text style={{ color: Colors.white }}> {selectedMac ? selectedMac?.name : 'Select Printer'}</Text>
-          <Feather name={'printer'} size={20} color={Colors.white} />
-        </TouchableOpacity>
-        <View
-          style={{
-            flex: 0.3,
-            backgroundColor: Colors.backgroundColor,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: scale(10),
-          }}>
-          <View style={{ marginBottom: 10, }}>
-            <Text style={{ color: Colors.grey }}>
-              Time To Deliver / Prepare (Minutes)
+                  ? 'Auto Print Enabled'
+                  : 'Auto Print Disabled'}
             </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity
-              style={{
-                borderWidth: scale(1),
-                height: scale(40),
-                width: scale(40),
-                borderRadius: 10,
-                borderColor: '#D1D5DB',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onPress={decrement}>
-              <Text style={{ fontSize: scale(25), color: '#000' }}>-</Text>
+            <Feather
+              name="printer"
+              size={16}
+              color={isPrintingEnabled ? Colors.lightprimary : Colors.white}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => OpenModalForPrinter()}
+            style={styles.printerActionBtn}>
+            <Text numberOfLines={1} style={styles.printerBtnText}>
+              {selectedMac ? selectedMac?.name : 'Select Printer'}
+            </Text>
+            <Feather name="printer" size={16} color={Colors.white} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.timeRow}>
+          <Text style={styles.timeLabel}>
+            Time To Deliver / Prepare (Minutes)
+          </Text>
+          <View style={styles.counterRow}>
+            <TouchableOpacity style={styles.counterBtn} onPress={decrement}>
+              <Text style={styles.counterBtnText}>-</Text>
             </TouchableOpacity>
-            <View
-              style={{
-                borderWidth: scale(1),
-                height: scale(40),
-                width: scale(60),
-                borderRadius: 10,
-                borderColor: '#D1D5DB',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#000'
-              }}>
-              <Text style={{ color: '#000' }}>{time}</Text>
+            <View style={styles.counterValueBox}>
+              <Text style={styles.counterValueText}>{time}</Text>
             </View>
-            <TouchableOpacity
-              style={{
-                borderWidth: scale(1),
-                height: scale(40),
-                width: scale(40),
-                borderRadius: 10,
-                borderColor: '#D1D5DB',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onPress={incrtement}>
-              <Text style={{ fontSize: scale(20), color: '#000' }}>+</Text>
+            <TouchableOpacity style={styles.counterBtn} onPress={incrtement}>
+              <Text style={styles.counterBtnText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1030,7 +1156,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.backgroundColor,
-    justifyContent: 'center',
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: scale(16),
+    paddingTop: Platform.OS === 'ios' ? verticalScale(10) : verticalScale(10),
+    paddingBottom: verticalScale(10),
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  headerTitle: {
+    fontSize: scale(18),
+    fontFamily: PoppinsFont.Poppins600,
+    color: '#1a1a1a',
+    fontWeight: '700',
+  },
+  badge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(2),
+    borderRadius: scale(12),
+  },
+  badgeText: {
+    color: Colors.white,
+    fontSize: scale(11),
+    fontWeight: '700',
+  },
+  pusherStatusBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(7),
+    borderRadius: scale(20),
+    gap: scale(6),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
+  pusherBtnConnected: {
+    backgroundColor: '#2e7d32',
+  },
+  pusherBtnDisconnected: {
+    backgroundColor: '#c62828',
+  },
+  pusherStatusText: {
+    color: '#fff',
+    fontSize: scale(12),
+    fontFamily: PoppinsFont.Poppins500,
+    fontWeight: '600',
   },
   titleText: {
     alignItems: 'center',
@@ -1057,36 +1240,99 @@ const styles = StyleSheet.create({
     color: Colors.iconBackground,
   },
 
-  print_button: {
-    position: 'absolute',
-    zIndex: 99,
-    right: 20,
-    bottom: 20,
-    gap: 10,
+  ordersListContent: {
+    paddingBottom: verticalScale(12),
   },
-  up: {
-    paddingVertical: 10,
-    paddingHorizontal: 5,
+  bottomControlPanel: {
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingHorizontal: scale(14),
+    paddingTop: verticalScale(8),
+    paddingBottom: verticalScale(10),
+    gap: verticalScale(8),
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  printerButtonsRow: {
+    flexDirection: 'row',
+    gap: scale(10),
+  },
+  printerActionBtn: {
+    flex: 1,
+    paddingVertical: verticalScale(9),
+    paddingHorizontal: scale(8),
     backgroundColor: 'rgb(255, 174, 26)',
-    borderRadius: 10,
+    borderRadius: scale(8),
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.white,
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(6),
   },
-  down: {
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    backgroundColor: 'rgb(255, 174, 26)',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.white,
+  printerBtnText: {
+    color: Colors.white,
+    fontSize: scale(11),
+    fontFamily: PoppinsFont.Poppins500,
+    fontWeight: '600',
+  },
+  timeRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: scale(8),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+  },
+  timeLabel: {
+    fontSize: scale(11),
+    fontFamily: PoppinsFont.Poppins500,
+    color: '#4B5563',
+    fontWeight: '600',
+    flex: 1,
+    marginRight: scale(6),
+  },
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+  },
+  counterBtn: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: Colors.white,
+    height: scale(32),
+    width: scale(32),
+    borderRadius: scale(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterBtnText: {
+    fontSize: scale(18),
+    color: '#111827',
+    fontWeight: '700',
+    lineHeight: scale(20),
+  },
+  counterValueBox: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: Colors.white,
+    height: scale(32),
+    minWidth: scale(45),
+    borderRadius: scale(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(6),
+  },
+  counterValueText: {
+    fontSize: scale(13),
+    color: '#111827',
+    fontWeight: '700',
   },
 });
 
