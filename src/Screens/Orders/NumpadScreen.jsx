@@ -981,7 +981,7 @@ const NumpadScreen = ({ navigation }) => {
       setSelectedProduct(product);
       setProductAddonQtys({});
       setProductSelectedDressings([]);
-      setProductSelectedType(product.types && product.types.length > 0 ? product.types[0] : null);
+      setProductSelectedType(null);
       setModalVisible(true);
     } else {
       addToCart(product, [], null, []);
@@ -1065,7 +1065,37 @@ const NumpadScreen = ({ navigation }) => {
     });
   };
 
+  const getMissingDealTypeItem = useCallback(() => {
+    if (!selectedDeal || !selectedDeal.deal_items) {return null;}
+    for (const item of selectedDeal.deal_items) {
+      const sel = dealSelections[item.item_id] || {};
+      const selProd = sel.prod || item.items_products?.[0];
+      if (!selProd) {continue;}
+
+      const hasTypes = (selProd.types || []).some(
+        tg => (tg.type_data && tg.type_data.length > 0) || tg.ts_id,
+      );
+
+      if (hasTypes && !sel.type) {
+        return {
+          itemTitle: item.item_title || selProd.prod_name,
+          prodName: selProd.prod_name,
+        };
+      }
+    }
+    return null;
+  }, [selectedDeal, dealSelections]);
+
   const confirmDealToCart = () => {
+    if (!selectedDeal) {return;}
+    const missingType = getMissingDealTypeItem();
+    if (missingType) {
+      Alert.alert(
+        'Typ erforderlich',
+        `Bitte wählen Sie einen Typ für "${missingType.itemTitle}" aus, bevor Sie das Deal in den Warenkorb legen.`,
+      );
+      return;
+    }
     addDealToCart(selectedDeal, dealSelections, calculateDealTotal);
     setDealModalVisible(false);
     setSelectedDeal(null);
@@ -1074,6 +1104,13 @@ const NumpadScreen = ({ navigation }) => {
 
   const confirmProductToCart = () => {
     if (!selectedProduct) {return;}
+    if (selectedProduct.types && selectedProduct.types.length > 0 && !productSelectedType) {
+      Alert.alert(
+        'Typ erforderlich',
+        'Bitte wählen Sie einen Typ aus, bevor Sie das Produkt in den Warenkorb legen.',
+      );
+      return;
+    }
     const addonsArray = (selectedProduct.addons || [])
       .filter(a => (productAddonQtys[a.as_id] || 0) > 0)
       .map(a => ({
@@ -2236,6 +2273,7 @@ const NumpadScreen = ({ navigation }) => {
                 <View style={styles.optionSection}>
                   <Text style={styles.optionSectionTitle}>
                     {selectedProduct.types[0]?.type_title_user || selectedProduct.types[0]?.type_title || 'Types'}
+                    <Text style={styles.requiredStar}> * (Pflicht)</Text>
                   </Text>
                   {selectedProduct.types.map(t => (
                     <TouchableOpacity
@@ -2332,7 +2370,10 @@ const NumpadScreen = ({ navigation }) => {
                 <Text style={styles.summaryPrice}>€{modalTotal}</Text>
               </View>
               <TouchableOpacity
-                style={styles.submitBtn}
+                style={[
+                  styles.submitBtn,
+                  selectedProduct?.types?.length > 0 && !productSelectedType && styles.submitBtnDisabled,
+                ]}
                 activeOpacity={0.8}
                 onPress={confirmProductToCart}>
                 <Text style={styles.submitBtnText}>Add to Cart - €{modalTotal}</Text>
@@ -2398,6 +2439,7 @@ const NumpadScreen = ({ navigation }) => {
                         <View key={typeGroup.type_id} style={styles.dealSubSection}>
                           <Text style={styles.dealSubSectionTitle}>
                             {typeGroup.type_title || 'Types'}
+                            <Text style={styles.requiredStar}> * (Pflicht)</Text>
                           </Text>
                           {typeGroup.type_data.map(t => (
                             <TouchableOpacity
@@ -2516,7 +2558,10 @@ const NumpadScreen = ({ navigation }) => {
                 <Text style={styles.summaryPrice}>€{calculateDealTotal}</Text>
               </View>
               <TouchableOpacity
-                style={styles.submitBtn}
+                style={[
+                  styles.submitBtn,
+                  Boolean(getMissingDealTypeItem()) && styles.submitBtnDisabled,
+                ]}
                 activeOpacity={0.8}
                 onPress={confirmDealToCart}>
                 <Text style={styles.submitBtnText}>Add to Cart - €{calculateDealTotal}</Text>
@@ -3612,10 +3657,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
   },
+  submitBtnDisabled: {
+    backgroundColor: '#94a3b8',
+    opacity: 0.75,
+  },
   submitBtnText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 15,
+  },
+  requiredStar: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: '700',
   },
   dealItemIcon: {
     marginTop: 2,
