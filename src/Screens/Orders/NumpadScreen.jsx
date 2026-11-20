@@ -17,15 +17,33 @@ import {
   Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSelector } from 'react-redux';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Colors } from '../../../important/Colors';
-import { imageUrl } from '../../../important/Urls';
 
 const CART_STORAGE_KEY = '@pos_cart_items';
 const POS_TOKEN = 'as23rlkjadsnlkcj23qkjnfsDKJcnzdfb3353ads54vd3favaeveavgbqaerbVEWDSC';
 const LOCATION_IQ_KEY = 'ff37d0c290fddc';
 const DEFAULT_BRANCH_ID = '224';
 const DEFAULT_BASE_URL = 'https://foodola.foodola.shop';
+
+const getDynamicImageUrl = (imgPath, storeBaseUrl) => {
+  if (!imgPath || typeof imgPath !== 'string') return null;
+  const trimmed = imgPath.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  const root = (storeBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
+  const clean = trimmed.replace(/^\/+/, '');
+  if (clean.toLowerCase().startsWith('admin_panel/uploads/')) {
+    return `${root}/${clean}`;
+  }
+  if (clean.toLowerCase().startsWith('uploads/')) {
+    return `${root}/admin_panel/${clean}`;
+  }
+  return `${root}/admin_panel/Uploads/${clean}`;
+};
 
 const SIDE_ICONS = [
   'format-list-bulleted',
@@ -109,11 +127,7 @@ const TableCardItem = React.memo(({
     orderSummary &&
     (orderSummary.count > 0 || (orderSummary.priceFormatted && orderSummary.priceFormatted !== '0,00 €'));
 
-  const imageUri = table.table_image
-    ? (table.table_image.startsWith('http')
-        ? table.table_image
-        : `${imageUrl || 'https://foodola.foodola.shop/admin_panel/Uploads/'}${table.table_image}`)
-    : null;
+  const imageUri = getDynamicImageUrl(table.table_image, baseUrl);
 
   return (
     <TouchableOpacity
@@ -211,7 +225,12 @@ const NumpadScreen = ({ navigation }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
+  const reduxAccount = useSelector(state => state.auth?.GetAccount);
+  const initialBaseUrl = reduxAccount?.base_url
+    ? reduxAccount.base_url.replace(/\/+$/, '')
+    : DEFAULT_BASE_URL;
+
+  const [baseUrl, setBaseUrl] = useState(initialBaseUrl);
   const [branchId, setBranchId] = useState(DEFAULT_BRANCH_ID);
 
   // Delivery / Pickup (Order Details) state
@@ -593,12 +612,19 @@ const NumpadScreen = ({ navigation }) => {
   };
 
   const resolveBaseUrlAndBranch = async () => {
-    let bUrl = DEFAULT_BASE_URL;
+    let bUrl = reduxAccount?.base_url
+      ? reduxAccount.base_url.replace(/\/+$/, '')
+      : DEFAULT_BASE_URL;
     let bId = DEFAULT_BRANCH_ID;
     try {
       const pdfBase = await AsyncStorage.getItem('PdfBaseUrl');
       if (pdfBase) {
         bUrl = pdfBase.replace(/\/+$/, '');
+      } else {
+        const storedBase = await AsyncStorage.getItem('baseUrl');
+        if (storedBase) {
+          bUrl = storedBase.replace(/\/Laravel\/api\/?$/i, '').replace(/\/+$/, '');
+        }
       }
       const storedUser = await AsyncStorage.getItem('user');
       if (storedUser) {
@@ -668,14 +694,11 @@ const NumpadScreen = ({ navigation }) => {
         }
       }
 
-      // 3. If still no tables, fallback to DEFAULT_BASE_URL (foodola.foodola.shop) & branch 224
+      // 3. If still no tables, fallback to DEFAULT_BASE_URL (foodola.foodola.shop) & branch 224 for tables only
       if (!tblRes && bUrl !== DEFAULT_BASE_URL) {
-        tblRes = await fetchTablesFor(DEFAULT_BASE_URL, DEFAULT_BRANCH_ID);
-        if (tblRes) {
-          bUrl = DEFAULT_BASE_URL;
-          bId = DEFAULT_BRANCH_ID;
-          setBaseUrl(DEFAULT_BASE_URL);
-          setBranchId(DEFAULT_BRANCH_ID);
+        const demoTables = await fetchTablesFor(DEFAULT_BASE_URL, DEFAULT_BRANCH_ID);
+        if (demoTables) {
+          tblRes = demoTables;
         }
       }
 
@@ -1602,10 +1625,8 @@ const NumpadScreen = ({ navigation }) => {
   };
 
   const renderProductCard = (product) => {
-    const fallbackUploads = `${baseUrl}/admin_panel/Uploads/`;
-    const imageSource = product.img
-      ? { uri: `${imageUrl || fallbackUploads}${product.img}` }
-      : null;
+    const imgUri = getDynamicImageUrl(product.img, baseUrl);
+    const imageSource = imgUri ? { uri: imgUri } : null;
 
     return (
       <TouchableOpacity
@@ -1786,10 +1807,8 @@ const NumpadScreen = ({ navigation }) => {
               contentContainerStyle={styles.cartListContent}
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => {
-                const fallbackUploads = `${baseUrl}/admin_panel/Uploads/`;
-                const imgSource = item.product?.img
-                  ? { uri: `${imageUrl || fallbackUploads}${item.product.img}` }
-                  : null;
+                const imgUri = getDynamicImageUrl(item.product?.img, baseUrl);
+                const imgSource = imgUri ? { uri: imgUri } : null;
 
                 const isDealItem = item.product?.isDeal || item.isDeal;
                 const hasDealCustoms = isDealItem && item.deal_items && item.deal_items.length > 0;
